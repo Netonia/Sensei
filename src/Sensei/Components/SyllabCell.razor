@@ -1,0 +1,58 @@
+@using Sensei.Data
+
+@if (showHiragana)
+{
+    @*<Speaker text="@Syllables.RomajiToHiragana[syllab]"></Speaker>*@
+    @Syllables.RomajiToHiragana[syllab]
+    @if (showMnemonic && Syllables.HiraganaMnemonics.ContainsKey(syllab))
+    {
+        <br />
+        <a href="/kana/@syllab">
+            <img src="img/hiragana/mnemonics-jp/@(Syllables.RomajiToHiragana[syllab]).jpg" style="width:40px" />
+        </a>
+    }
+    @if (showRomaji)
+    {
+        <br />
+        <a href="/kana/@syllab">@syllab</a>
+    }
+    @if (showMnemonic && Syllables.HiraganaMnemonics.ContainsKey(syllab))
+    {
+        <br />
+        @Syllables.HiraganaMnemonics[syllab]
+    }
+}
+@if (showKatakana)
+{
+    @*<Speaker text="@Syllables.RomajiToKatakana[syllab]"></Speaker>*@
+    @Syllables.RomajiToKatakana[syllab]
+    @if (showMnemonic && Syllables.KatakanaMnemonics.ContainsKey(syllab))
+    {
+        <br />
+        <a href="/kana/@syllab">
+            <img src="img/katakana/mnemonics-jp/@(Syllables.RomajiToKatakana[syllab]).jpg" style="width:40px" />
+        </a>
+    }
+    @if (showRomaji)
+    {
+        <br />
+        <a href="/kana/@syllab">@syllab</a>
+    }
+    @if (showMnemonic && Syllables.KatakanaMnemonics.ContainsKey(syllab))
+    {
+        <br />
+        @Syllables.KatakanaMnemonics[syllab]
+    }
+}
+@code {
+    [Parameter]
+    public string syllab { get; set; }
+    [Parameter]
+    public bool showRomaji { get; set; } = false;
+    [Parameter]
+    public bool showHiragana { get; set; } = false;
+    [Parameter]
+    public bool showKatakana { get; set; } = false;
+    [Parameter]
+    public bool showMnemonic { get; set; }
+}

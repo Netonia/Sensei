@@ -1,0 +1,33 @@
+﻿@using Sensei.Data
+@if (show)
+{
+    <tr>
+@if (showRomaji)
+{
+        <td>@syllab</td>
+}
+@if (showHiragana)
+{
+        <td>@*<Speaker text="@Syllables.HiraganaDiacritics[@syllab]"></Speaker>*@
+            @Syllables.HiraganaDiacritics[@syllab]</td>
+}
+@if (showKatakana)
+{
+        <td>@*<Speaker text="@Syllables.KatakanaDiacritics[@syllab]"></Speaker>*@
+            @Syllables.KatakanaDiacritics[@syllab]</td>
+}
+    </tr>
+}
+@code
+{
+    [Parameter]
+    public string syllab { get; set; }
+    [Parameter]
+    public bool show { get; set; } = true;
+    [Parameter]
+    public bool showRomaji { get; set; } = false;
+    [Parameter]
+    public bool showHiragana { get; set; } = false;
+    [Parameter]
+    public bool showKatakana { get; set; } = false;
+}

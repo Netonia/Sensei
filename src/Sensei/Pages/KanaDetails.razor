@@ -1,0 +1,147 @@
+﻿@page "/kana/{syllab}"
+@using Sensei.Components
+@using Sensei.Data
+
+<PageTitle>Kana</PageTitle>
+
+<h1>Kana @Syllab @*<Player sound="@Syllab" />*@</h1>
+@*@if (_spelling != null)
+{
+    <h2>@(_spelling.Spell) no "@(_spelling.Syllab)" @(_spelling.Japanese + Syllables.RomajiToHiragana[Syllables.no] + Syllables.RomajiToKatakana[Syllab]) (@(_spelling.Meaning))</h2>
+}*@
+<div class="row ms-2">
+    <div class="col-lg-2">
+        <div class="form-check form-switch d-inline">
+            <input id="showHiragana" type="checkbox" class="form-check-input" role="switch" @bind="@_showHiragana" />
+            <label for="showHiragana" class="form-check-label">Show Hiragana</label>
+        </div>
+    </div>
+    <div class="col-lg-2">
+        <div class="form-check form-switch d-inline">
+            <input id="showKatakana" type="checkbox" class="form-check-input" role="switch" @bind="@_showKatakana" />
+            <label for="showKatakana" class="form-check-label">Show Katakana</label>
+        </div>
+    </div>
+    <div class="col-lg-2">
+        <div class="form-check form-switch d-inline">
+            <input id="showStrokeFont" type="checkbox" class="form-check-input" role="switch" @bind="@_showStrokeFont" />
+            <label for="showStrokeFont" class="form-check-label">Show stroke font</label>
+        </div>
+    </div>
+    <div class="col-lg-2">
+        <div class="form-check form-switch d-inline">
+            <input id="showMnemonics" type="checkbox" class="form-check-input" role="switch" @bind="@_showMnemonics" />
+            <label for="showMnemonics" class="form-check-label">Show Mnemonics</label>
+        </div>
+    </div>
+    <div class="col-lg-2">
+        <div class="form-check form-switch d-inline">
+            <input id="showStrokeOrder" type="checkbox" class="form-check-input" role="switch" @bind="@_showStrokeOrder" />
+            <label for="showStrokeOrder" class="form-check-label">Show stroke order</label>
+        </div>
+    </div>
+    <div class="col-lg-2">
+        <div class="form-check form-switch d-inline">
+            <input id="showStrokeOrderAnimation" type="checkbox" class="form-check-input" role="switch" @bind="@_showStrokeOrderAnimation" />
+            <label for="showStrokeOrderAnimation" class="form-check-label">Stroke order animation</label>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-4 text-center">
+        @if (_showHiragana)
+        {
+            <h2>@*<Speaker text="@Syllables.RomajiToHiragana[Syllab]" />*@@Syllables.RomajiToHiragana[Syllab]</h2>
+            @if (_showStrokeFont)
+            {
+                <h3 class="kanjiStrokeOrders display-1">@Syllables.RomajiToHiragana[Syllab]</h3>
+            }
+            @*<img src="img/hiragana/png/@(Syllab).png" /><br />*@
+            <img src="img/hiragana/svg/@(Syllab).svg" style="width:100px" />
+            <br />
+            @if (_showMnemonics)
+            {
+                if (Syllables.HiraganaMnemonics.ContainsKey(Syllab))
+                {
+                    @Syllables.HiraganaMnemonics[Syllab]
+                    <br />
+                    <img src="img/hiragana/mnemonics-jp/@(Syllables.RomajiToHiragana[Syllab]).jpg" style="height:100px" />
+                    <br />
+                }
+            }
+            @if (_showStrokeOrder)
+            {
+                <img src="img/hiragana/stroke-order/@(Syllab).png" style="height:100px" />
+                <br />
+            }
+            @if (_showStrokeOrderAnimation)
+            {
+                @*<img src="img/hiragana/stroke-order-animation/@(Syllab).gif" style="width:100px" />
+        <br />*@
+                @*<img src="img/hiragana/stroke-animation-gif/@(Syllab).gif" style="height:100px" />
+        <br />*@
+                <img src="img/hiragana/stroke-animated-gif/@(Syllab).gif" style="height:100px" />
+                <br />
+            }
+        }
+    </div>
+    <div class="col-lg-4 text-center">
+        @if (_showKatakana)
+        {
+            <h2>@*<Speaker text="@Syllables.RomajiToKatakana[Syllab]" />*@@Syllables.RomajiToKatakana[Syllab]</h2>
+            @if (_showStrokeFont)
+            {
+                <h3 class="kanjiStrokeOrders display-1">@Syllables.RomajiToKatakana[Syllab]</h3>
+            }
+            @*<img src="img/katakana/png/@(Syllab).png" /><br />*@
+            <img src="img/katakana/svg/@(Syllab).svg" style="width:100px" />
+            <br />
+            @if (_showMnemonics)
+            {
+                if (Syllables.KatakanaMnemonics.ContainsKey(Syllab))
+                {
+                    @Syllables.KatakanaMnemonics[Syllab]
+                    <br />
+                    <img src="img/katakana/mnemonics-jp/@(Syllables.RomajiToKatakana[Syllab]).jpg" style="height:100px" />
+                    <br />
+                }
+            }
+            @if (_showStrokeOrder)
+            {
+                <img src="img/katakana/stroke-order/@(Syllab).png" style="height:100px" />
+                <br />
+            }
+            @if (_showStrokeOrderAnimation)
+            {
+                @*<img src="img/katakana/stroke-order-animation/@(Syllab).gif" style="width:100px" />
+        <br />*@
+                @*<img src="img/katakana/stroke-animation-gif/@(Syllab).gif" style="height:100px" />
+        <br />*@
+                <img src="img/katakana/stroke-animated-gif/@(Syllab).gif" style="height:100px" />
+                <br />
+            }
+        }
+    </div>
+    <div class="col-lg-4">
+        <KanaChart />
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public string Syllab { get; set; }
+    private bool _showHiragana = true;
+    private bool _showKatakana = true;
+    private bool _showMnemonics = false;
+    private bool _showStrokeFont = true;
+    private bool _showStrokeOrder = false;
+    private bool _showStrokeOrderAnimation = false;
+    private Spelling _spelling;
+
+    //protected override void OnAfterRender(bool firstRender)
+    //{
+    //    _spelling = RadiotelephonyAlphabet.Kana.SingleOrDefault(a => a.Syllab == Syllab);
+    //    StateHasChanged();
+    //}
+}

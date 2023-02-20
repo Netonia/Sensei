@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="420"
+   height="420"
+   viewBox="0 0 111.125 111.12501"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="Katakana letter Bo.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="345.76714"
+     inkscape:cy="230.41447"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-center="true"
+     inkscape:snap-object-midpoints="false"
+     inkscape:window-width="1280"
+     inkscape:window-height="657"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:document-rotation="0"
+     inkscape:snap-bbox="true"
+     inkscape:bbox-paths="true"
+     inkscape:bbox-nodes="true" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-185.87499)">
+    <path
+       d="m 72.654533,205.71886 c 4.550819,3.17499 7.514143,6.56165 9.736636,9.31331 2.222493,2.53999 3.17499,4.76248 4.868318,4.76248 1.481662,0 2.645825,-0.9525 2.645825,-2.53999 0,-2.11666 -1.164163,-4.02166 -3.809988,-6.45581 -2.539992,-2.32833 -6.561646,-4.76249 -11.959129,-6.87915 z m -42.3332,41.80404 c -2.010827,5.92664 -4.762485,11.42996 -12.382461,17.25078 -3.280823,2.53999 -5.397483,3.17499 -5.397483,5.82081 0,2.01083 1.269996,3.70416 3.704155,3.70416 7.514143,0 15.663284,-14.60496 16.827447,-26.14076 z m 11.006632,-38.41738 c 5.503316,0.74083 7.937475,1.37583 8.360807,4.65665 0.317499,2.43416 0.423332,8.78414 0.529165,15.23995 -7.937475,0.9525 -25.188254,3.17499 -30.056572,3.28082 -2.328326,0.10584 -4.550819,-2.64582 -6.561646,-5.39748 l -1.904994,0.84667 c 0.211666,2.01082 0.634998,4.55081 1.269996,5.82081 1.799161,3.38666 5.714982,6.45581 8.043308,6.45581 2.328326,0 3.386656,-1.90499 7.619976,-2.75165 5.503316,-1.27 14.81662,-2.43416 21.695765,-3.38666 0,3.49249 0,6.66748 0,8.88997 0,8.99581 0,26.24659 -0.317499,31.1149 -0.105833,1.48167 -1.05833,1.5875 -2.222493,1.37583 -2.751658,-0.635 -6.773312,-2.01082 -10.265801,-3.17499 l -1.05833,2.2225 c 3.386656,1.90499 6.984978,4.44498 8.889972,6.56164 2.328326,2.85749 2.222493,4.97415 5.185817,4.97415 3.598322,0 6.032481,-4.65665 6.032481,-9.20747 0,-2.85749 -0.529165,-25.82325 -0.529165,-33.76073 0,-2.64582 0,-6.13831 0.105833,-9.6308 7.090811,-0.74083 15.87495,-1.69333 20.10827,-1.69333 4.656652,0 7.619976,0.3175 10.794966,0.3175 2.645825,0 3.704155,-0.74083 3.704155,-3.06915 0,-2.43416 -5.29165,-4.86832 -9.207471,-4.86832 -2.328326,0 -3.386656,1.69333 -25.294087,4.44498 0.105833,-4.65665 0.211666,-8.88997 0.423332,-11.42996 0.211666,-2.96332 2.328326,-3.17499 2.328326,-5.07998 0,-2.43416 -5.503316,-5.92665 -9.842469,-6.13832 -2.222493,0 -5.503316,0.52917 -7.937475,1.05833 z m 27.939912,39.05237 c 7.514143,5.29165 12.170795,11.95913 14.922453,16.93328 2.010827,3.38666 3.280823,6.87915 6.244147,6.87915 2.539992,0 3.809988,-2.22249 3.280823,-5.18582 -1.693328,-8.6783 -12.276628,-16.29828 -22.965761,-20.5316 z m 12.911626,-48.89484 c 4.762485,3.17499 7.302477,5.82081 9.630803,8.46664 2.328326,2.53999 3.386656,4.86832 5.185817,4.76248 1.587497,0 2.434157,-1.05833 2.434157,-2.64582 0,-2.11666 -1.05833,-4.12749 -3.915819,-6.34998 -2.645825,-2.11666 -6.667479,-4.12749 -11.959129,-5.92665 z"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:105.833px;line-height:100%;font-family:'Noto Serif CJK JP';-inkscape-font-specification:'Noto Serif CJK JP';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       id="path9" />
+  </g>
+</svg>

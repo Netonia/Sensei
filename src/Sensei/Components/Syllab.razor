@@ -1,0 +1,35 @@
+@using Sensei.Data
+
+<a href="/kana/@syllab">
+@if (showHiragana)
+{
+    @Syllables.RomajiToHiragana[syllab]
+}
+@if (showKatakana)
+{
+    @if (showHiragana)
+    {
+        <br />
+    }
+    @Syllables.RomajiToKatakana[syllab]
+}
+@if (showSyllab)
+{
+    @if (showHiragana || showKatakana)
+    {
+        <br />
+    }
+    @syllab
+}
+</a>
+@code 
+{
+    [Parameter]
+    public string syllab { get; set; }
+    [Parameter]
+    public bool showHiragana { get; set; } = false;
+    [Parameter]
+    public bool showKatakana { get; set; } = false;
+    [Parameter]
+    public bool showSyllab { get; set; } = false;
+}

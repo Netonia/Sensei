@@ -1,0 +1,475 @@
+﻿@using Sensei.Components
+@using Sensei.Data
+
+@code
+{
+    private bool _isHorizontal = true;
+    private bool _showHiragana = true;
+    private bool _showKatakana = true;
+    private bool _showRomaji = true;
+    private bool _showHeaders = true;
+    private bool _showDakuten = false;
+}
+<div class="row ms-2">
+    <div class="col-lg-2">
+        <input id="isHorizontal" type="checkbox" class="form-check-input" @bind="@_isHorizontal" />
+        <label for="isHorizontal" class="form-check-label"><small>Horizontal</small></label>
+    </div>
+    <div class="col-lg-2">
+        <input id="showHiraganaInChart" type="checkbox" class="form-check-input" @bind="@_showHiragana" />
+        <label for="showHiraganaInChart" class="form-check-label"><small>Hiragana</small></label>
+    </div>
+    <div class="col-lg-2">
+        <input id="showKatakanaInChart" type="checkbox" class="form-check-input" @bind="@_showKatakana" />
+        <label for="showKatakanaInChart" class="form-check-label"><small>Katakana</small></label>
+    </div>
+    <div class="col-lg-2">
+        <input id="showRomajiInChart" type="checkbox" class="form-check-input" @bind="@_showRomaji" />
+        <label for="showRomajiInChart" class="form-check-label"><small>Rōmaji</small></label>
+    </div>
+    <div class="col-lg-2">
+        <input id="showHeaders" type="checkbox" class="form-check-input" @bind="@_showHeaders" />
+        <label for="showHeaders" class="form-check-label"><small>Headers</small></label>
+    </div>
+    <div class="col-lg-2">
+        <input id="showDakuten" type="checkbox" class="form-check-input" @bind="@_showDakuten" />
+        <label for="showDakuten" class="form-check-label"><small>Dakuten</small></label>
+    </div>
+</div>
+
+@if (!_isHorizontal)
+{
+    <table class="table table-sm table-striped table-bordered">
+        <thead>
+            @if (_showHeaders)
+            {
+                <tr>
+                    <th></th>
+                    <th>@Syllables.a</th>
+                    <th>@Syllables.i</th>
+                    <th>@Syllables.u</th>
+                    <th>@Syllables.e</th>
+                    <th>@Syllables.o</th>
+                </tr>
+            }
+        </thead>
+        <tbody>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <td></td>
+                }
+                <td><Syllab syllab="a" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="i" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="u" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="e" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="o" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>k</th>
+                }
+                <td><Syllab syllab="ka" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ki" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ku" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ke" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ko" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            @if (_showDakuten)
+            {
+                <tr>
+                    @if (_showHeaders)
+                    {
+                        <th>g (k゛)</th>
+                    }
+                    <td><Syllab syllab="ga" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="gi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="gu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="ge" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="go" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                </tr>
+            }
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>s</th>
+                }
+                <td><Syllab syllab="sa" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="shi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="su" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="se" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="so" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            @if (_showDakuten)
+            {
+                <tr>
+                    @if (_showHeaders)
+                    {
+                        <th>z (s゛)</th>
+                    }
+                    <td><Syllab syllab="za" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="ji" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="zu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="ze" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="zo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                </tr>
+            }
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>t</th>
+                }
+                <td><Syllab syllab="ta" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="chi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="tsu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="te" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="to" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            @if (_showDakuten)
+            {
+                <tr>
+                    @if (_showHeaders)
+                    {
+                        <th>d (t゛)</th>
+                    }
+                    <td><Syllab syllab="da" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="dji" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="dju" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="de" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="do" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                </tr>
+            }
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>n</th>
+                }
+                <td><Syllab syllab="na" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ni" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="nu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ne" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="no" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>h</th>
+                }
+                <td><Syllab syllab="ha" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="hi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="fu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="he" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ho" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            @if (_showDakuten)
+            {
+                <tr>
+                    @if (_showHeaders)
+                    {
+                        <th>b (h゛)</th>
+                    }
+                    <td><Syllab syllab="ba" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="bi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="bu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="be" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="bo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                </tr>
+                <tr>
+                    @if (_showHeaders)
+                    {
+                        <th>p (h゜ )</th>
+                    }
+                    <td><Syllab syllab="pa" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="pi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="pu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="pe" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                    <td><Syllab syllab="po" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                </tr>
+            }
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>m</th>
+                }
+                <td><Syllab syllab="ma" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="mi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="mu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="me" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="mo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>y</th>
+                }
+                <td><Syllab syllab="ya" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td></td>
+                <td><Syllab syllab="yu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td></td>
+                <td><Syllab syllab="yo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>r</th>
+                }
+                <td><Syllab syllab="ra" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ri" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ru" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="re" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ro" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>w</th>
+                }
+                <td><Syllab syllab="wa" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td><Syllab syllab="wo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>n</th>
+                }
+                <td colspan="5"><Syllab syllab="n" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+        </tbody>
+    </table>
+}
+else
+{
+    <table class="table table-sm table-striped table-bordered">
+        @if (_showHeaders)
+        {
+            <thead>
+                <tr>
+                    <th>w</th>
+                    <th>r</th>
+                    <th>y</th>
+                    <th>m</th>
+                    @if (_showDakuten)
+                    {
+                        <th>p</th>
+                    }
+                    @if (_showDakuten)
+                    {
+                        <th>b</th>
+                    }
+                    <th>h</th>
+                    <th>n</th>
+                    @if (_showDakuten)
+                    {
+                        <th>d</th>
+                    }
+                    <th>t</th>
+                    @if (_showDakuten)
+                    {
+                        <th>z</th>
+                    }
+                    <th>s</th>
+                    @if (_showDakuten)
+                    {
+                        <th>g</th>
+                    }
+                    <th>k</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+        }
+        <tbody>
+            <tr>
+                <td><Syllab syllab="wa" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ra" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ya" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ma" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="pa" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="ba" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ha" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="na" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="da" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ta" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="za" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="sa" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="ga" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ka" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="a" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showHeaders)
+                {
+                    <th>a</th>
+                }
+            </tr>
+            <tr>
+                <td></td>
+                <td><Syllab syllab="ri" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td></td>
+                <td><Syllab syllab="mi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="pi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="bi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="hi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ni" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="dji" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="chi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="ji" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="shi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="gi" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ki" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="i" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showHeaders)
+                {
+                    <th>i</th>
+                }
+            </tr>
+            <tr>
+                <td></td>
+                <td><Syllab syllab="ru" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="yu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="mu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="pu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="bu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="fu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="nu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="dju" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="tsu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="zu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="su" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="gu" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ku" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="u" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showHeaders)
+                {
+                    <th>u</th>
+                }
+            </tr>
+            <tr>
+                <td>@*<Syllab syllab="we" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/>*@</td>
+                <td><Syllab syllab="re" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td></td>
+                <td><Syllab syllab="me" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="pe" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="be" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="he" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ne" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="da" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="te" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="ze" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="se" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="ge" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ke" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="e" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showHeaders)
+                {
+                    <th>e</th>
+                }
+            </tr>
+            <tr>
+                <td><Syllab syllab="wo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="ro" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="yo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="mo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="po" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="bo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ho" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="no" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="do" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="to" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="zo" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="so" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showDakuten)
+                {
+                    <td><Dakuten syllab="go" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"></Dakuten></td>
+                }
+                <td><Syllab syllab="ko" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                <td><Syllab syllab="o" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+                @if (_showHeaders)
+                {
+                    <th>o</th>
+                }
+            </tr>
+            <tr>
+                @if (_showHeaders)
+                {
+                    <th>n</th>
+                }
+                <td colspan="@(_showDakuten ? (_showHeaders ? "15" : "16") : (_showHeaders ? "10" : "11"))"><Syllab syllab="n" showHiragana="@_showHiragana" showKatakana="@_showKatakana" showSyllab="@_showRomaji"/></td>
+            </tr>
+        </tbody>
+    </table>
+}

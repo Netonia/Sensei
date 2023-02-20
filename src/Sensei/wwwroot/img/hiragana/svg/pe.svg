@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="420"
+   height="420"
+   viewBox="0 0 111.125 111.12501"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="Hiragana letter Pe.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="345.76714"
+     inkscape:cy="230.41447"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-center="true"
+     inkscape:snap-object-midpoints="false"
+     inkscape:window-width="1366"
+     inkscape:window-height="705"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:document-rotation="0"
+     inkscape:snap-bbox="true"
+     inkscape:bbox-paths="true"
+     inkscape:bbox-nodes="true" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-185.87499)">
+    <path
+       d="m 82.126586,234.08211 c 6.561646,0 11.959129,-5.39749 11.959129,-12.06497 0,-6.56164 -5.397483,-11.95913 -11.959129,-11.95913 -6.667479,0 -12.064962,5.39749 -12.064962,11.95913 0,6.66748 5.397483,12.06497 12.064962,12.06497 z m 0,-20.53161 c 4.656652,0 8.46664,3.80999 8.46664,8.46664 0,4.86832 -3.809988,8.57248 -8.46664,8.57248 -4.762485,0 -8.572473,-3.70416 -8.572473,-8.57248 0,-4.65665 3.809988,-8.46664 8.572473,-8.46664 z m -71.543109,37.46489 c 2.222494,2.53999 6.349981,5.29165 9.207472,5.29165 2.963324,0 4.550819,-2.2225 7.196644,-5.71499 4.021654,-5.18581 11.535797,-15.23995 15.345785,-19.68493 1.587495,-1.905 2.857491,-2.75166 4.127487,-2.75166 1.587495,0 3.280823,0.635 5.29165,2.64582 8.360807,8.88997 16.827447,20.21411 25.823252,29.20991 8.995805,8.88997 18.097443,15.45162 22.013264,15.45162 2.328329,0 3.386659,-1.37583 3.386659,-3.49249 0,-2.43416 -1.37583,-4.86832 -4.233323,-6.34998 -21.1666,-11.42996 -31.961566,-27.93991 -43.39153,-38.84071 -3.280823,-3.28082 -6.138314,-4.23332 -8.889972,-4.23332 -2.751658,0 -4.868318,1.37583 -7.090811,3.80999 -4.021654,4.44498 -12.69996,14.28745 -17.568278,18.83827 -1.904994,1.69333 -3.704155,2.75166 -5.079984,2.75166 -1.904994,0 -4.339153,-1.5875 -6.8791458,-3.91582 l -1.693328,1.48166 c 0.529165,2.11666 1.269996,4.12749 2.4341588,5.50332 z"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:105.833px;line-height:100%;font-family:'Noto Serif CJK JP';-inkscape-font-specification:'Noto Serif CJK JP';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       id="path9" />
+  </g>
+</svg>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="500"
+   height="500"
+   viewBox="0 0 132.29167 132.29167"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   sodipodi:docname="Japanese_Katakana_kyokashotai_YI.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.7"
+     inkscape:cx="167.77204"
+     inkscape:cy="250.4995"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1440"
+     inkscape:window-height="837"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-164.70834)"
+     style="display:inline">
+    <path
+       inkscape:connector-curvature="0"
+       id="path3922"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:141.11109924px;line-height:1.25;font-family:MHGKyokashotaiTHK;-inkscape-font-specification:MHGKyokashotaiTHK;letter-spacing:0.00264583px;word-spacing:-0.00264583px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.42333332"
+       d="m 62.340316,187.24876 c -4.064,-2.9351 -7.224888,-5.19288 -9.482666,-6.32178 -2.93511,-1.12888 -5.418665,-1.35465 -7.224888,-0.67732 -2.257777,0.45155 -2.483555,1.35467 -0.90311,2.48355 3.160888,2.25777 4.741333,4.74133 5.418666,7.22489 1.580444,5.19288 3.386665,12.86933 4.289777,22.80356 1.354666,12.41777 2.709333,27.09332 4.515555,44.02665 -6.547555,4.28978 -12.192,7.67645 -16.707555,10.61155 -2.93511,1.1289 -5.870221,0.90312 -8.805331,-0.9031 -2.483557,-1.58045 -3.612445,-1.1289 -2.709334,1.80622 0.903112,3.61245 4.064,7.45066 8.805332,11.51466 3.386668,2.93512 6.096,2.70934 7.902223,-0.9031 1.128888,-2.25778 8.805333,-8.57956 22.126219,-19.41688 11.288888,-9.2569 21.674666,-17.61068 31.608886,-24.60978 1.35467,-2.48357 0.67733,-3.38667 -1.580443,-2.70934 l -34.543998,22.12622 c 0,-10.16 0,-20.32 -0.903111,-30.93155 -1.354667,-18.288 -2.032,-28.448 -0.90311,-30.93155 1.354666,-2.25778 0.90311,-4.064 -0.903112,-5.1929 z"
+       sodipodi:nodetypes="cccccccccccsccccccc" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer 2"
+     style="display:none" />
+</svg>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="420"
+   height="420"
+   viewBox="0 0 111.125 111.12501"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="Hiragana letter Pu.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="345.76714"
+     inkscape:cy="230.41447"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-center="true"
+     inkscape:snap-object-midpoints="false"
+     inkscape:window-width="1366"
+     inkscape:window-height="705"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:document-rotation="0"
+     inkscape:snap-bbox="true"
+     inkscape:bbox-paths="true"
+     inkscape:bbox-nodes="true" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-185.87499)">
+    <path
+       d="m 90.381559,208.57635 c 4.444986,0 7.937475,3.49249 7.937475,7.93748 0,4.44498 -3.492489,7.93747 -7.937475,7.93747 -4.444986,0 -7.937475,-3.49249 -7.937475,-7.93747 0,-4.44499 3.492489,-7.93748 7.937475,-7.93748 z m 0,19.47327 c 6.34998,0 11.429961,-5.18581 11.429961,-11.53579 0,-6.24415 -5.079981,-11.42997 -11.429961,-11.42997 -6.34998,0 -11.429964,5.18582 -11.429964,11.42997 0,6.34998 5.079984,11.53579 11.429964,11.53579 z m -26.352417,40.74571 c 0,4.55082 -2.963324,7.30248 -9.842469,7.30248 -6.773312,0 -14.287455,-2.43416 -20.637435,-4.97415 8.995805,-7.61998 16.827447,-13.22913 24.976588,-15.98079 4.021654,5.39749 5.503316,9.52497 5.503316,13.65246 z M 45.190868,206.14219 c 7.831642,3.06916 14.393288,7.09081 16.827447,11.64163 1.05833,1.905 0.952497,2.85749 -1.05833,4.23332 -4.23332,2.85749 -15.769117,7.93748 -15.769117,14.07579 0,5.18582 6.244147,10.9008 11.006632,16.29828 -10.371634,3.59833 -19.790771,10.5833 -30.162405,17.77995 -5.714982,3.80999 -7.302477,4.65665 -8.889972,4.65665 -2.222493,0 -4.762485,-3.49249 -5.714983,-7.72581 l -2.1166598,0.10583 c -0.423332,1.69333 -0.634998,3.28083 -0.634998,5.07999 0,5.18582 6.6674798,11.2183 9.9483028,11.2183 3.17499,0 4.550819,-3.38666 8.46664,-6.87915 l 3.809988,-3.38665 c 5.29165,2.64582 10.054135,4.44498 14.075789,5.92664 4.762485,1.79916 8.889972,2.64583 12.911626,2.64583 7.619976,0 13.017459,-3.49249 13.017459,-10.9008 0,-5.92665 -1.904994,-11.32413 -6.667479,-17.14495 1.693328,-0.3175 3.386656,-0.42333 5.079984,-0.42333 12.69996,0 21.1666,8.57247 24.870755,17.99161 1.269996,3.28082 2.645825,6.03248 4.762485,6.03248 2.434158,0 3.492488,-1.90499 3.492488,-4.12748 0,-2.96333 -1.05833,-5.92665 -3.809987,-9.94831 -4.444986,-6.66748 -14.922453,-13.44079 -28.257411,-13.44079 -3.069157,0 -6.032481,0.3175 -8.889972,0.9525 -4.762485,-4.55082 -12.170795,-10.47747 -12.170795,-14.49912 0,-4.55082 8.995805,-8.25498 13.440791,-9.20747 4.23332,-0.84667 8.995805,-0.10584 8.995805,-3.38666 0,-5.92665 -4.656652,-11.5358 -10.689133,-14.92245 -4.444986,-2.75166 -9.313304,-4.02166 -14.710787,-5.18582 z"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:105.833px;line-height:100%;font-family:'Noto Serif CJK JP';-inkscape-font-specification:'Noto Serif CJK JP';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       id="path9" />
+  </g>
+</svg>

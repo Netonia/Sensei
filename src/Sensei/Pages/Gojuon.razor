@@ -1,0 +1,580 @@
+﻿@page "/gojuon"
+@using Sensei.Components
+@using Sensei.Data;
+
+<PageTitle>Gojūon</PageTitle>
+
+@code
+{
+    private bool _horizontal = true;
+    private bool _showHiragana = true;
+    private bool _showKatakana = true;
+    private bool _showRomaji = true;
+    private bool _showMnemonics = false;
+    private bool _showYoon = false;
+}
+<h1>Gojūon 五十音</h1>
+<div class="row ms-2">
+    <div class="col-2">
+        <input id="horizontal" type="checkbox" class="form-check-input" @bind="@_horizontal" />
+        <label for="horizontal" class="form-check-label">Horizontal</label>
+    </div>
+    <div class="col-2">
+        <input id="showHiragana" type="checkbox" class="form-check-input" @bind="@_showHiragana" />
+        <label for="showHiragana" class="form-check-label">Hiragana</label>
+    </div>
+    <div class="col-2">
+        <input id="showKatakana" type="checkbox" class="form-check-input" @bind="@_showKatakana" />
+        <label for="showKatakana" class="form-check-label">Katakana</label>
+    </div>
+    <div class="col-2">
+        <input id="showRomaji" type="checkbox" class="form-check-input" @bind="@_showRomaji" />
+        <label for="showRomaji" class="form-check-label">Rōmaji</label>
+    </div>
+    <div class="col-2">
+        <input id="showMnemonics" type="checkbox" class="form-check-input" @bind="@_showMnemonics" />
+        <label for="showMnemonics" class="form-check-label">Mnemonics</label>
+    </div>
+    <div class="col-2">
+        <input id="showYoon" type="checkbox" class="form-check-input" @bind="@_showYoon" />
+        <label for="showYoon" class="form-check-label">Yōon</label>
+    </div>
+</div>
+
+@if (_horizontal)
+{
+    <div class="row">
+        @if (_showHiragana)
+        {
+            <div class="col-lg-6">
+                <h2 class="text-center">ひらがな</h2>
+                <table class="table table-sm table-bordered table-striped chart">
+                    <thead>
+                        <tr class="text-center">
+                            <th scope="col">w</th>
+                            <th scope="col">r</th>
+                            <th scope="col">y</th>
+                            <th scope="col">m</th>
+                            <th scope="col">h</th>
+                            <th scope="col">n</th>
+                            <th scope="col">t</th>
+                            <th scope="col">s</th>
+                            <th scope="col">k</th>
+                            <th scope="col">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><SyllabCell syllab="@Syllables.wa" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ra" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ya" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ma" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ha" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.na" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ta" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.sa" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ka" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.a" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.ri" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.mi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.hi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ni" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.chi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.shi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ki" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.i" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td><SyllabCell syllab="@Syllables.n" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ru" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.yu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.mu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.fu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.nu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.tsu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.su" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ku" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.u" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.re" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.me" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.he" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ne" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.te" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.se" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ke" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.e" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td><SyllabCell syllab="@Syllables.wo" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ro" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.yo" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.mo" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ho" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.no" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.to" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.so" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ko" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.o" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <br>
+                <table class="table table-sm table-bordered table-striped chart">
+                    <thead>
+                        <tr class="text-center">
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                            <th>p</th>
+                            <th>b</th>
+                            <th></th>
+                            <th>d</th>
+                            <th>z</th>
+                            <th>g</th>                            
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pa" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ba" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.da" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.za" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ga" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.bi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.dji" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ji" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.gi" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.bu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.dju" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.zu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.gu" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pe" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.be" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.de" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ze" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ge" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.po" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.bo" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.doo" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.zo" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.go" showHiragana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                @if (_showYoon)
+                {
+                    <br>
+                    <h2 class="text-center">ようおん (ゃ•ゅ•ょ)</h2>
+                    <table class="table table-sm table-bordered table-striped">
+                        <tbody>
+                            <tr>
+                                <td><SyllabCellDiacritic syllab="@Syllables.rya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.mya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.pya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.bya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.nya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.cha" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ja" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.sha" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.gya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.kya" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                            </tr>
+                            <tr>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ryu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.myu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.pyu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.byu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.nyu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.chu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ju" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.shu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.gyu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.kyu" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                            </tr>
+                            <tr>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ryo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.myo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.pyo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.byo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.nyo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.cho" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.jo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.sho" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.gyo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.kyo" showHiragana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+            </div>
+        }
+        @if (_showKatakana)
+        {
+            <div class="col-lg-6">
+                <h2 class="text-center">かたかな</h2>
+                <table class="table table-sm table-bordered table-striped chart">
+                    <thead>
+                        <tr class="text-center">
+                            <th>w</th>
+                            <th>r</th>
+                            <th>y</th>
+                            <th>m</th>
+                            <th>h</th>
+                            <th>n</th>
+                            <th>t</th>
+                            <th>s</th>
+                            <th>k</th>
+                            <th>&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><SyllabCell syllab="@Syllables.wa" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ra" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ya" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ma" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ha" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.na" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ta" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.sa" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ka" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.a" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.ri" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.mi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.hi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ni" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.chi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.shi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ki" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.i" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td><SyllabCell syllab="@Syllables.n" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ru" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.yu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.mu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.fu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.nu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.tsu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.su" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ku" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.u" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.re" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.me" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.he" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ne" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.te" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.se" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ke" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.e" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                        <tr>
+                            <td><SyllabCell syllab="@Syllables.wo" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ro" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.yo" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.mo" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ho" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.no" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.to" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.so" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ko" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.o" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <br>
+                <table class="table table-sm table-bordered table-striped chart">
+                    <thead>
+                        <tr class="text-center">
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                            <th>p</th>
+                            <th>b</th>
+                            <th></th>
+                            <th>d</th>
+                            <th>z</th>
+                            <th>g</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pa" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ba" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.da" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.za" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ga" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>                            
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.bi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.dji" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ji" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.gi" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.bu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.dju" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.zu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.gu" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.pe" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.be" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.de" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ze" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.ge" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"></td>
+                            <td><SyllabCell syllab="@Syllables.po" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.bo" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td>&nbsp;</td>
+                            <td><SyllabCell syllab="@Syllables.doo" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.zo" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>
+                            <td><SyllabCell syllab="@Syllables.go" showKatakana="true" showMnemonic="@_showMnemonics" showRomaji="_showRomaji"></SyllabCell></td>                            
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                @if (_showYoon)
+                {
+                    <br>
+                    <h2 class="text-center">ようおん (ャ•ュ•ョ)</h2>
+                    <table class="table table-sm table-bordered table-striped">
+                        <tbody>
+                            <tr>
+                                <td><SyllabCellDiacritic syllab="@Syllables.rya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.mya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.pya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.bya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.nya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.cha" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ja" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.sha" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.gya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.kya" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                            </tr>
+                            <tr>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ryu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.myu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.pyu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.byu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.nyu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.chu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ju" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.shu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.gyu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.kyu" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                            </tr>
+                            <tr>
+                                <td><SyllabCellDiacritic syllab="@Syllables.ryo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.myo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.pyo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.byo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.nyo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.cho" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.jo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.sho" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.gyo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                                <td><SyllabCellDiacritic syllab="@Syllables.kyo" showKatakana="true" showRomaji="_showRomaji"></SyllabCellDiacritic></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-lg-3">
+            <table class="table table-sm table-striped table-bordered">
+                    <tbody>
+                <SyllabLine syllab="@Syllables.a" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.i" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.u" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.e" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.o" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ka" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ki" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ku" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ke" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ko" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.kya" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.kyu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.kyo" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <SyllabLine syllab="@Syllables.sa" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.shi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.su" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.se" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.so" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.sha" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.shu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.sho" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <SyllabLine syllab="@Syllables.ta" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.chi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.tsu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.te" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.to" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.cha" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.chu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.cho" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <SyllabLine syllab="@Syllables.na" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ni" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.nu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ne" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.no" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.nya" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.nyu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.nyo" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>                
+                    </tbody>
+            </table>
+        </div>
+        <div class="col-lg-3">
+            <table class="table table-sm table-striped table-bordered">                
+                    <tbody>
+                <SyllabLine syllab="@Syllables.ha" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.hi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.fu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.he" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ho" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.hya" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.hyu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.hyo" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <SyllabLine syllab="@Syllables.ma" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.mi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.mu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.me" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.mo" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.mya" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.myu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.myo" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <SyllabLine syllab="@Syllables.ya" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.yu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.yo" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ra" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ri" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ru" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.re" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ro" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <DiacriticLine syllab="@Syllables.rya" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.ryu" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <DiacriticLine syllab="@Syllables.ryo" show="@_showYoon" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                <SyllabLine syllab="@Syllables.wa" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.wo" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.n" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                    </tbody>
+            </table>
+        </div>
+        <div class="col-lg-3">
+            <table class="table table-sm table-striped table-bordered">
+                    <tbody>
+                <SyllabLine syllab="@Syllables.ga" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.gi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.gu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ge" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.go" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.za" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ji" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.zu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ze" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.zo" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.da" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.dji" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.dju" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.de" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.doo" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.ba" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.bi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.bu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.be" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.bo" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.pa" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.pi" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.pu" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.pe" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                <SyllabLine syllab="@Syllables.po" showMnemonic="@_showMnemonics" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></SyllabLine>
+                    </tbody>
+            </table>
+        </div>
+        <div class="col-lg-3">
+            @if (_showYoon)
+            {
+                <table class="table table-sm table-striped table-bordered">
+                    <tbody>
+                    <DiacriticLine syllab="@Syllables.gya" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.gyu" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.gyo" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.ja" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.ju" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.jo" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.bya" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.byu" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.byo" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.pya" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.pyu" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    <DiacriticLine syllab="@Syllables.pyo" showRomaji="_showRomaji" showHiragana="_showHiragana" showKatakana="_showKatakana"></DiacriticLine>
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
