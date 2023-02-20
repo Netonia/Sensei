@@ -3,13 +3,13 @@
 @if (showHiragana)
 {
     @*<Speaker text="@Syllables.HiraganaDiacritics[syllab]"></Speaker>*@
-    @Syllables.HiraganaDiacritics[syllab]
+    <a href="/kana/@syllab">@Syllables.HiraganaDiacritics[syllab]</a>
     <br />
 }
 @if (showKatakana)
 {
     @*<Speaker text="@Syllables.KatakanaDiacritics[syllab]"></Speaker>*@
-    @Syllables.KatakanaDiacritics[syllab]
+    <a href="/kana/@syllab">@Syllables.KatakanaDiacritics[syllab]</a>
     <br />
 }
 @if (showRomaji)
