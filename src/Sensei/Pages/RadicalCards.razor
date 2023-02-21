@@ -1,0 +1,50 @@
+﻿@page "/radicalcards"
+@using Sensei.Components
+@using Sensei.Data
+@*@using Kawazu
+@using Wacton.Desu.Radicals*@
+@using WanaKanaNet
+
+<PageTitle>Radicals</PageTitle>
+
+<h1>Radicals @KanjiList.Radicals.Count()</h1>
+
+<div class="row">
+    <div class="col-12">
+        @foreach (var radical in KanjiList.Radicals)
+        {
+            nb += 1;
+            var transliteration = radical; // Convert(radical);
+            var kanji = KanjiList.RadicalSymbols.FirstOrDefault(s => s.Symbol == radical);
+            var value = (kanji != null) ? kanji.Meaning : transliteration;
+            <RadicalCard radical="@(radical)" kana="@value" />
+        }
+    </div>
+    @*<div class="col-6">
+    @foreach (var radical in _kanjiToRadicals)
+    {
+    <a href="/radical/@radical.Key">@radical.Key</a>
+    @foreach (var value in radical.Value)
+    {
+    <span class="badge badge-primary m-1">@value</span>
+    }
+    <br />
+    }
+    </div>*@
+</div>
+@code
+{
+    private int nb = 0;
+    //private List<KeyValuePair<string, IEnumerable<string>>> _kanjiToRadicals;
+
+    //protected override void OnInitialized()
+    //{
+    //    _kanjiToRadicals = RadicalLookup.ParseKanjiToRadicals().Where(k => KanjiList.Radicals.Contains(k.Key)).ToList();
+    //}
+
+    //private string Convert(string radical)
+    //{
+    //    var converter = new KawazuConverter();
+    //    return Task.Run(() => converter.Convert(radical, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")")).Result;
+    //}
+}

@@ -1,0 +1,325 @@
+﻿@page "/verbs"
+@using Sensei.Components
+@using Doushi
+@*@using Kawazu*@
+
+<PageTitle>Verbs</PageTitle>
+
+<h1>Verbs</h1>
+
+<div class="row">
+    <div class="col-4">
+        <div>
+            <input type="text" class="form-control" @bind="_verb" />
+            <br />
+            <input type="text" class="form-control" @bind="_pronounciation" />
+            <br />
+            <button class="btn btn-primary" @onclick="Conjugate">Conjugate</button>
+        </div>
+        <div class="mt-3">
+            <table class="table table-bordered table-striped">
+                <tbody>
+                    <tr>
+                        <th>Form@*@_transliteration*@</th>
+                        <th>Affirmative</th>
+                        <th>Negative</th>
+                    </tr>
+                    <tr>
+                        <th>Non-Past</th>
+                        <td><Speaker text="@_nonPastAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_nonPastNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Non-Past Polite</th>
+                        <td><Speaker text="@_nonPastPoliteAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_nonPastPoliteNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Imperative</th>
+                        <td><Speaker text="@_imperativeAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_imperativeNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Passive</th>
+                        <td><Speaker text="@_passiveAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_passiveNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Causative</th>
+                        <td><Speaker text="@_causativeAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_causativeNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Causative Passive</th>
+                        <td><Speaker text="@_causativePassiveAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_causativePassiveNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Potential</th>
+                        <td><Speaker text="@_potentialAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_potentialNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Te Form</th>
+                        <td><Speaker text="@_teFormAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_teFormNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Past</th>
+                        <td><Speaker text="@_pastAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_pastNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                    <tr>
+                        <th>Past Polite</th>
+                        <td><Speaker text="@_pastPoliteAffirmative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                        <td><Speaker text="@_pastPoliteNegative" showPlayButton="@showPlayButton" showRomaji="true" /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-8">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Verbes</th>
+                    <th>-masu</th>
+                    <th>-mashou</th>
+                    <th>-tai</th>
+                    <th>-nai</th>
+                    <th>-ou</th>
+                    <th>Capacité</th>
+                    <th>Capacité</th>
+                    <th>-te</th>
+                    <th>-ta</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="10" class="bg-light">1er groupe</td></tr>
+                <tr>
+                    <td>買う K<span class="bg-warning">au</span> (acheter)</td>
+                    <td>imasu</td>
+                    <td>imashou</td>
+                    <td>itai</td>
+                    <td>wanai</td>
+                    <td>ou</td>
+                    <td>eru</td>
+                    <td>emasu</td>
+                    <td>tte</td>
+                    <td>tta</td>
+                </tr>
+                <tr>
+                    <td>聞く Ki<span class="bg-warning">ku</span> (écouter)</td>
+                    <td>kimasu</td>
+                    <td>kimashou</td>
+                    <td>kitai</td>
+                    <td>kanai</td>
+                    <td>kou</td>
+                    <td>keru</td>
+                    <td>kemasu</td>
+                    <td>ite</td>
+                    <td>ita</td>
+                </tr>
+                <tr>
+                    <td>ぬぐ Nu<span class="bg-warning">gu</span> (essuyer)</td>
+                    <td>gimasu</td>
+                    <td>gimashou</td>
+                    <td>gitai</td>
+                    <td>ganai</td>
+                    <td>gou</td>
+                    <td>geru</td>
+                    <td>gemasu</td>
+                    <td>ide</td>
+                    <td>ida</td>
+                </tr>
+                <tr>
+                    <td>あそぶ Aso<span class="bg-warning">bu</span> (jouer)</td>
+                    <td>bimasu</td>
+                    <td>bimashou</td>
+                    <td>bitai</td>
+                    <td>banai</td>
+                    <td>bou</td>
+                    <td>beru</td>
+                    <td>bemasu</td>
+                    <td>nde</td>
+                    <td>nda</td>
+                </tr>
+                <tr>
+                    <td>読む Yo<span class="bg-warning">mu</span> (lire)</td>
+                    <td>mimasu</td>
+                    <td>mimashou</td>
+                    <td>mitai</td>
+                    <td>manai</td>
+                    <td>mou</td>
+                    <td>meru</td>
+                    <td>memasu</td>
+                    <td>nde</td>
+                    <td>nda</td>
+                </tr>
+                <tr>
+                    <td>話す Hana<span class="bg-warning">su</span> (parler)</td>
+                    <td>shimasu</td>
+                    <td>shimashou</td>
+                    <td>shitai</td>
+                    <td>sanai</td>
+                    <td>sou</td>
+                    <td>seru</td>
+                    <td>semasu</td>
+                    <td>shite</td>
+                    <td>shita</td>
+                </tr>
+                <tr>
+                    <td>待つ Ma<span class="bg-warning">tsu</span> (attendre)</td>
+                    <td>chimasu</td>
+                    <td>chimashou</td>
+                    <td>chitai</td>
+                    <td>tanai</td>
+                    <td>tou</td>
+                    <td>teru</td>
+                    <td>temasu</td>
+                    <td>tte</td>
+                    <td>tta</td>
+                </tr>
+                <tr>
+                    <td>死ぬ Shi<span class="bg-warning">su</span> (mourir)</td>
+                    <td>shimasu</td>
+                    <td>shimashou</td>
+                    <td>sitai</td>
+                    <td>sanai</td>
+                    <td>sou</td>
+                    <td>seru</td>
+                    <td>semasu</td>
+                    <td>shite</td>
+                    <td>shita</td>
+                </tr>
+                <tr>
+                    <td>帰る Kae<span class="bg-warning">ru</span> (revenir)</td>
+                    <td>rimasu</td>
+                    <td>rimashou</td>
+                    <td>ritai</td>
+                    <td>ranai</td>
+                    <td>rou</td>
+                    <td>reru</td>
+                    <td>remasu</td>
+                    <td>tte</td>
+                    <td>tta</td>
+                </tr>
+                <tr><td colspan="10" class="bg-light">2ème groupe</td></tr>
+                <tr>
+                    <td>食べる Tabe<span class="bg-warning">ru</span> (manger)</td>
+                    <td>masu</td>
+                    <td>mashou</td>
+                    <td>tai</td>
+                    <td>nai</td>
+                    <td>you</td>
+                    <td>rareru</td>
+                    <td>raremasu</td>
+                    <td>te</td>
+                    <td>ta</td>
+                </tr>
+                <tr>
+                    <td>見る Mi<span class="bg-warning">ru</span> (voir)</td>
+                    <td>masu</td>
+                    <td>mashou</td>
+                    <td>tai</td>
+                    <td>nai</td>
+                    <td>you</td>
+                    <td>rareru</td>
+                    <td>raremasu</td>
+                    <td>te</td>
+                    <td>ta</td>
+                </tr>
+                <tr><td colspan="10" class="bg-light">3ème groupe</td></tr>
+                <tr>
+                    <td>する <span class="bg-warning">Suru</span> (faire)</td>
+                    <td>Shimasu</td>
+                    <td>Shimashou</td>
+                    <td>Shitai</td>
+                    <td>Shinai</td>
+                    <td>Shiyou</td>
+                    <td>Dekiru</td>
+                    <td>Dekimasu</td>
+                    <td>Shite</td>
+                    <td>Shita</td>
+                </tr>
+                <tr>
+                    <td>来る <span class="bg-warning">Kuru</span> (venir)</td>
+                    <td>kimasu</td>
+                    <td>kimashou</td>
+                    <td>kitai</td>
+                    <td>konai</td>
+                    <td>koyou</td>
+                    <td>korareru</td>
+                    <td>koraremasu</td>
+                    <td>Kite</td>
+                    <td>Kita</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code
+{
+    private bool showPlayButton = true;
+    private string _verb = "行く";
+    private string _pronounciation = "いく";
+
+    private string _nonPastAffirmative;
+    private string _nonPastPoliteAffirmative;
+    private string _pastAffirmative;
+    private string _pastPoliteAffirmative;
+    private string _teFormAffirmative;
+    private string _potentialAffirmative;
+    private string _passiveAffirmative;
+    private string _causativeAffirmative;
+    private string _causativePassiveAffirmative;
+    private string _imperativeAffirmative;
+    private string _nonPastNegative;
+    private string _nonPastPoliteNegative;
+    private string _pastNegative;
+    private string _pastPoliteNegative;
+    private string _teFormNegative;
+    private string _potentialNegative;
+    private string _passiveNegative;
+    private string _causativeNegative;
+    private string _causativePassiveNegative;
+    private string _imperativeNegative;
+
+    private string _transliteration;
+
+    private async void Conjugate()
+    {
+        //var converter = new KawazuConverter();
+        //_transliteration = await converter.Convert(_verb, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+
+        var conj = Conjugator.Conjugate(_verb, _pronounciation);
+
+        if (conj != null)
+        {
+            _nonPastAffirmative = $"{conj.NonPast.Affirmative}";
+            _nonPastPoliteAffirmative = $"{conj.NonPastPolite.Affirmative}";
+            _pastAffirmative = $"{conj.Past.Affirmative}";
+            _pastPoliteAffirmative = $"{conj.PastPolite.Affirmative}";
+            _teFormAffirmative = $"{conj.TeForm.Affirmative}";
+            _potentialAffirmative = $"{conj.Potential.Affirmative}";
+            _passiveAffirmative = $"{conj.Passive.Affirmative}";
+            _causativeAffirmative = $"{conj.Causative.Affirmative}";
+            _causativePassiveAffirmative = $"{conj.CausativePassive.Affirmative}";
+            _imperativeAffirmative = $"{conj.Imperative.Affirmative}";
+
+            _nonPastNegative = $"{conj.NonPast.Negative}";
+            _nonPastPoliteNegative = $"{conj.NonPastPolite.Negative}";
+            _pastNegative = $"{conj.Past.Negative}";
+            _pastPoliteNegative = $"{conj.PastPolite.Negative}";
+            _teFormNegative = $"{conj.TeForm.Negative}";
+            _potentialNegative = $"{conj.Potential.Negative}";
+            _passiveNegative = $"{conj.Passive.Negative}";
+            _causativeNegative = $"{conj.Causative.Negative}";
+            _causativePassiveNegative = $"{conj.CausativePassive.Negative}";
+            _imperativeNegative = $"{conj.Imperative.Negative}";
+        }
+
+        StateHasChanged();
+    }
+}

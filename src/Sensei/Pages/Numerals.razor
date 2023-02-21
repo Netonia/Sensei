@@ -1,0 +1,160 @@
+﻿@page "/numerals"
+@using Sensei.Components
+@using Sensei.Data
+@using Humanizer
+@using System.Globalization
+@using Toolbelt.Blazor.SpeechSynthesis
+@using WanaKanaNet
+@inject SpeechSynthesis SpeechSynthesis
+
+<PageTitle>Numerals</PageTitle>
+
+<h1>Numerals</h1>
+
+<div class="row">
+    <div class="col-lg-12">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Number</th>
+                    <th>Character</th>
+                    <th>On reading</th>
+                    <th>Kun reading</th>
+                    <th>Preferred reading</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0</td>
+                    <td><Speaker showPlayButton="true" text="@Numbers.ArabicToKanji[0]"></Speaker> / 〇*</td>
+                    <td>@Numbers.ArabicToRomajiOn[0] / @Numbers.ArabicToOn[0]</td>
+                    <td>—</td>
+                    <td>zero / ゼロ (loanword, gairaigo)</td>
+                </tr>
+                @foreach (var number in Numbers.ArabicNumbers.Skip(1))
+                {
+                    <NumeralLine number="@(number)"></NumeralLine>
+                }
+                <NumeralLine number="10"></NumeralLine>
+                <NumeralLine number="100"></NumeralLine>
+                <NumeralLine number="1000"></NumeralLine>
+                <NumeralLine number="10000"></NumeralLine>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Number</th>
+                    <th>Japanese</th>
+                    <th>Spelling</th>
+                    <th>Meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var num in RadiotelephonyAlphabet.Numerals)
+                {
+                    <tr>
+                        <td>@num.Syllab</td>
+                        <td><Speaker showPlayButton="true" text="@("数字の" + num.Japanese)"></Speaker></td>
+                        <td>Sūji no @num.Spell</td>
+                        <td>@num.Meaning</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <label>Numbers</label>
+        <input type="number" class="form-control" @oninput="toJapanese" maxlength="16" />
+        <label>Japanese digits</label>
+        <input class="form-control" @bind="@_japaneseDigits" />
+        <label>Traditional Japanese</label>
+        <input class="form-control" @bind="@_japaneseWordsTraditional" />
+        <label>Hiragana</label>
+        <input class="form-control" @bind="@_japaneseWordsHiragana" />
+        <label>Japanese Ordinal</label>
+        <input class="form-control" @bind="@_japaneseOrdinalWords" />
+    </div>
+    <div class="col-lg-6">
+        @*<label>English digits</label>
+        <input class="form-control" @bind="@_englishDigits" />*@
+        <label>English</label>
+        <input class="form-control" @bind="@_englishWords" />
+        <label>French</label>
+        <input class="form-control" @bind="@_frenchWords" />
+        <label>Japanese</label>
+        <input class="form-control" @bind="@_japaneseWords" />
+        <label>Romaji</label>
+        <input class="form-control" @bind="@_romaji" />
+        <label>English Ordinal</label>
+        <input class="form-control" @bind="@_englishOrdinalWords" />
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <label>Japanese</label>
+        <input class="form-control" @oninput="toArabic" maxlength="16" />
+    </div>
+    <div class="col-lg-6">
+        <label>Arabic</label>
+        <input class="form-control" @bind="@_arabicNumbers" />
+    </div>
+</div>
+
+@code
+{
+    //private string _englishDigits = "";
+    private string _englishWords = "";
+    private string _englishOrdinalWords = "";
+    private string _frenchWords = "";
+    private string _japaneseWords = "";
+    private string _japaneseOrdinalWords = "";
+    private string _raw = "";
+    private string _romaji = "";
+    private string _japaneseDigits = "";
+    private string _japaneseWordsTraditional = "";
+    private string _japaneseWordsHiragana = "";
+    private string _japaneseNumbers = "";
+    private ulong _conversionStyle = 0;
+    private decimal _arabicNumbers;
+
+    private void toJapanese(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out int number))
+        {
+            _englishWords = number.ToWords(new CultureInfo("en")); //English.GenerateEnglishWords(number);
+                                                                   //_englishDigits = English.NumberWithCommas(number);
+            _frenchWords = number.ToWords(new CultureInfo("fr"));
+            _japaneseWords = number.ToWords(Japanese.CultureInfo);
+            _englishOrdinalWords = number.ToOrdinalWords(new CultureInfo("en"));
+            _japaneseOrdinalWords = number.ToOrdinalWords(Japanese.CultureInfo);
+
+            _japaneseDigits = Numbers.GenerateJapaneseDigits(number, 10000);
+            _raw = Numbers.GenerateRawReading(number);
+            _romaji = Numbers.GenerateRomajiReading(_raw, number);
+            _japaneseWordsTraditional = Numbers.GenerateTraditionalJapaneseReading(_raw, number);
+            _japaneseWordsHiragana = Numbers.GenerateHiraganaReading(_raw, number);
+
+            //var now = DateTime.Now;
+            //now.ToOrdinalWords();
+        }
+    }
+
+    private void toArabic(ChangeEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(e.Value.ToString()))
+        {
+            _japaneseNumbers = e.Value.ToString();
+            JapaneseKansuuji.TryParse(_japaneseNumbers, _conversionStyle, out _arabicNumbers);
+        }
+    }
+}

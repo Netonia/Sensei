@@ -1,0 +1,153 @@
+﻿@page "/game"
+@using System.Timers
+@using Sensei.Data
+@using WanaKanaNet
+
+<div class="row">
+    <div class="col-lg-4 text-center">
+        <h2>Matches found: @matchesFound</h2>
+    </div>
+    <div class="col-lg-4">
+        <div class="form-check form-switch">
+            <input id="switchKana" type="checkbox" value="true" class="form-check-input" role="switch" @bind="@switchKana" />
+            <label for="switchKana" class="form-check-label">Hiragana / Katakana</label>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <button class="btn btn-primary btn-sm" @onclick="SetUpGame">Restart</button>
+    </div>
+</div>
+<div class="row">
+    @for (var index = 0; index < gojuon.Count; index++)
+    {
+        var item = gojuon[index];
+        var uniqueDescription = $"Button #{index}";
+        <div class="col-1 m-1">
+            <button @onclick="@(()=>ButtonClick(item, uniqueDescription))" type="button" class="btn btn-light p-1">
+                <h2>@item</h2>
+            </button>
+        </div>
+    }
+</div>
+<div class="row">
+    @for (var index = 0; index < kana.Count; index++)
+    {
+        var item = kana[index];
+        var uniqueDescription = $"ButtonK #{index}";
+        <div class="col-1 m-1">
+            <button @onclick="@(()=>ButtonClick(item, uniqueDescription))" type="button" class="btn btn-light p-1">
+                <h2>@item</h2>
+            </button>
+        </div>
+    }
+</div>
+@*<div class="row">
+        <h2>Time: @timeDisplay</h2>
+    </div>*@
+
+@code {
+    //List<string> Items = new List<string>();
+    List<string> gojuon = new List<string>();
+    List<string> kana = new List<string>();
+    //List<string> shuffledItems = new List<string>();
+    bool switchKana = false;
+    int matchesFound = 0;
+    Timer timer;
+    int tenthsOfSecondsElapsed = 0;
+    string timeDisplay;
+
+    protected override void OnInitialized()
+    {
+        timer = new Timer(100);
+        timer.Elapsed += Timer_Tick;
+
+        SetUpGame();
+    }
+
+    private void SetUpGame()
+    {
+        Random random = new Random();
+        gojuon = Syllables.Gojuon.RandomSample(Syllables.Gojuon.Count(), false).ToList();
+        kana = gojuon.Select(i => (!switchKana ? Syllables.RomajiToHiragana[i] : Syllables.RomajiToKatakana[i])).OrderBy(item => random.Next()).ToList();
+        matchesFound = 0;
+        tenthsOfSecondsElapsed = 0;
+    }
+
+    string currentItem = string.Empty;
+    string currentDescription = string.Empty;
+
+    private void ButtonClick(string item, string description)
+    {
+        if (currentItem == string.Empty)
+        {
+            currentItem = item;
+            currentDescription = description;
+
+            timer.Start();
+        }
+        else if (((Syllables.RomajiToHiragana.ContainsKey(item) && currentItem == Syllables.RomajiToHiragana[item]) ||
+                    (Syllables.HiraganaMonographs.ContainsKey(item) && currentItem == Syllables.HiraganaMonographs[item]))
+                && (description != currentDescription))
+        {
+            currentItem = string.Empty;
+            gojuon = gojuon.Select(a => (a == item) ? a.Replace(item, string.Empty) : a).ToList();
+            kana = kana.Select(a => (a == item) ? a.Replace(item, string.Empty) : a).ToList();
+            if (Syllables.RomajiToHiragana.ContainsKey(item))
+            {
+                kana = kana.Select(a => (a == Syllables.RomajiToHiragana[item]) ? a.Replace(Syllables.RomajiToHiragana[item], string.Empty) : a).ToList();
+            }
+            if (Syllables.HiraganaMonographs.ContainsKey(item))
+            {
+                gojuon = gojuon.Select(a => (a == Syllables.HiraganaMonographs[item]) ? a.Replace(Syllables.HiraganaMonographs[item], string.Empty) : a).ToList();
+            }
+            matchesFound++;
+
+            if (matchesFound == gojuon.Count)
+            {
+                timer.Stop();
+                timeDisplay += " - Play Again?";
+
+                SetUpGame();
+            }
+        }
+        else if (((Syllables.RomajiToKatakana.ContainsKey(item) && currentItem == Syllables.RomajiToKatakana[item]) ||
+                    (Syllables.KatakanaMonographs.ContainsKey(item) && currentItem == Syllables.KatakanaMonographs[item]))
+                && (description != currentDescription))
+        {
+            currentItem = string.Empty;
+            gojuon = gojuon.Select(a => (a == item) ? a.Replace(item, string.Empty) : a).ToList();
+            kana = kana.Select(a => (a == item) ? a.Replace(item, string.Empty) : a).ToList();
+            if (Syllables.RomajiToKatakana.ContainsKey(item))
+            {
+                kana = kana.Select(a => (a == Syllables.RomajiToKatakana[item]) ? a.Replace(Syllables.RomajiToKatakana[item], string.Empty) : a).ToList();
+            }
+            if (Syllables.KatakanaMonographs.ContainsKey(item))
+            {
+                gojuon = gojuon.Select(a => (a == Syllables.KatakanaMonographs[item]) ? a.Replace(Syllables.KatakanaMonographs[item], string.Empty) : a).ToList();
+            }
+            matchesFound++;
+
+            if (matchesFound == gojuon.Count)
+            {
+                timer.Stop();
+                timeDisplay += " - Play Again?";
+
+                SetUpGame();
+            }
+        }
+        else
+        {
+            currentItem = string.Empty;
+        }
+    }
+
+    private void Timer_Tick(Object source, ElapsedEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            tenthsOfSecondsElapsed++;
+            timeDisplay = (tenthsOfSecondsElapsed / 10F).ToString("0.0s");
+            StateHasChanged();
+        });
+    }
+}

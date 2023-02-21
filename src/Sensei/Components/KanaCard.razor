@@ -1,0 +1,27 @@
+﻿@using Sensei.Data
+
+<div class="flip-card">
+    <div class="flip-card-inner" style=@(flipped ? "transform: rotateY(180deg);" : "")>
+        <div class="flip-card-front" @onclick="() => flip()">
+            <h1 class="display-1 m-4">@kana</h1>
+        </div>
+        <div class="flip-card-back" @onclick="() => flip()">
+            <h1 class="display-1 m-4">@syllab</h1>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string syllab { get; set; }
+    [Parameter]
+    public string kana { get; set; }
+    [Parameter]
+    public bool flipped { get; set; }
+
+    public async Task flip()
+    {
+        flipped = !flipped;
+        await Task.Delay(100);
+    }
+}

@@ -1,0 +1,13 @@
+@using Sensei.Data
+<tr>
+    <td>@number</td>
+    <td><Speaker showPlayButton="true" text="@Numbers.ArabicToKanji[number]"></Speaker></td>
+    <td>@Numbers.ArabicToRomajiOn[number] / @Numbers.ArabicToOn[number]</td>
+    <td>@Numbers.ArabicToRomajiKun[number] / @Numbers.ArabicToKun[number]</td>
+    <td>@Numbers.ArabicToRomaji[number]</td>
+</tr>
+@code 
+{
+    [Parameter]
+    public int number { get; set; }
+}

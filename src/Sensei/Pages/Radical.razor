@@ -1,0 +1,75 @@
+﻿@page "/radical/{Value}"
+@using Sensei.Data
+@*@using Kawazu
+@using Wacton.Desu.Japanese
+@using Wacton.Desu.Radicals*@
+
+<PageTitle>Radical</PageTitle>
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/radicals">Radicals</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Value</li>
+    </ol>
+</nav>
+<h1>Radical @(KanjiList.RadicalSymbols.Any(s => s.Symbol == Value) ? KanjiList.RadicalSymbols.FirstOrDefault(s => s.Symbol == Value).ToString() : Value) @_transliteration</h1>
+<div class="row">
+    <div class="col-6">
+        <h2 class="kanjiStrokeOrders display-1">@Value</h2>
+        <img src="img/kanji/radicals/@(Value).gif" style="height:100px" /><br />
+        <img src="img/kanji/radicals-animation/@(Value).gif" style="height:100px" /><br />
+    </div>
+    <div class="col-6">
+        @if (_radicals != null)
+        {
+            <h2>Kanji</h2>
+            @foreach (var radical in _radicals)
+            {
+                <a href="/kanji/@radical">@radical</a>
+                <br />
+            }
+        }
+        <a href="https://en.wiktionary.org/wiki/@(Value)" target="_blank">Wiki</a>
+        <br />
+        @if (_kanjis != null)
+        {
+            @foreach (var kanji in _kanjis)
+            {
+                <a class="m-1" href="/kanji/@kanji">@kanji</a>
+            }
+        }
+    </div>
+</div>
+@code
+{
+    [Parameter]
+    public string Value { get; set; }
+    public string _transliteration;
+    private IDictionary<string, IEnumerable<string>> _kanjiToRadicals;
+    private IDictionary<string, IEnumerable<string>> _radicalToKanjis;
+    private List<string> _radicals;
+    private List<string> _kanjis;
+
+    protected override void OnInitialized()
+    {
+        //var converter = new KawazuConverter();
+        //_transliteration = Task.Run(() => converter.Convert(Value, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")")).Result;
+        //_kanjiToRadicals = RadicalLookup.ParseKanjiToRadicals();
+        try
+        {
+            _radicals = _kanjiToRadicals[Value].ToList();
+        }
+        catch (Exception)
+        {
+        }
+
+        //_radicalToKanjis = RadicalLookup.ParseRadicalToKanjis();
+        //try
+        //{
+        //    _kanjis = _radicalToKanjis[Value].ToList();
+        //}
+        //catch (Exception)
+        //{
+        //}
+    }
+}

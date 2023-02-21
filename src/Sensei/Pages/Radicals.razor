@@ -1,0 +1,57 @@
+﻿@page "/radicals"
+@using Sensei.Data;
+
+<PageTitle>Radicals</PageTitle>
+
+<h1>Radicals</h1>
+
+<div class="row">
+    <div class="col-12">
+        <table class="table table-bordered table-striped">
+            <tbody>
+            @((MarkupString)start)
+            @foreach (var radicalGroup in radicals.OrderBy(r => r.StrokeCount).GroupBy(r => r.StrokeCount))
+            {     
+                @if (indexAll > 1)
+                {
+                    @if (indexAll % 10 == 0 && indexAll > 1)
+                    {
+                        @((MarkupString)line)
+                    }
+                    <td class="text-center bg-info"><span class="fs-5">@radicalGroup.Key</span></td>
+                    ++indexAll;
+                }
+                @foreach (var radical in radicalGroup.OrderBy(r => r.Symbol))
+                {
+                    @if (indexAll % 10 == 0 && indexAll > 1)
+                    {
+                        @((MarkupString)line)
+                    }
+                    <td class="text-center">
+                            @*<a class="d-none d-sm-block" href="https://en.wikipedia.org/wiki/Radical_@(indexRadical + 1)" target="_blank">@(indexRadical + 1)</a> <br> *@
+                        <a href="/radical/@radical.Symbol" class="fs-5">@radical.Symbol</a>
+                    </td>
+                    ++indexAll;
+                    ++indexRadical;
+                }
+            }
+            @((MarkupString)end)
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code
+{
+    private int indexAll;
+    private int indexRadical;
+    private string start = "<tr>";
+    private string line = "</tr><tr>";
+    private string end = "</tr>";
+    private List<RadicalSymbol> radicals;
+
+    protected override void OnInitialized()
+    {
+        radicals = KanjiList.RadicalSymbols;
+    }
+}

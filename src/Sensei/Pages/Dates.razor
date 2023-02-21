@@ -1,0 +1,588 @@
+﻿@page "/dates"
+@using System.Globalization
+@using Sensei.Components
+@using Sensei.Data
+@using Sensei.Models
+
+<PageTitle>Dates</PageTitle>
+
+<h1>Dates</h1>
+
+<div class="row">
+    <div class="col-lg-4">
+        <label>DateTime</label>
+        <input type="datetime-local" class="form-control" @onchange="changeDateTime" /><br />
+        <label>Japanese</label>
+        <input class="form-control" type="text" @bind="@_japaneseDateTime" /><br />
+        <label>D</label>
+        <input class="form-control" type="text" @bind="@_japaneseDateTimeD" /><br />
+        <label>F</label>
+        <input class="form-control" type="text" @bind="@_japaneseDateTimeF" /><br />
+        <label>G</label>
+        <input class="form-control" type="text" @bind="@_japaneseDateTimeG" /><br />
+        <label>Year</label>
+        <input class="form-control" type="text" @bind="@_japaneseYear" /><br />
+        <label>Era</label>
+        <input class="form-control" type="text" @bind="@_era" />
+    </div>
+    <div class="col-lg-4">
+        <label>Date</label>
+        <input type="date" class="form-control" @onchange="changeDate" /><br />
+        <label>Japanese</label>
+        <input class="form-control" type="text" @bind="@_japaneseDate" /><br />
+    </div>
+    <div class="col-lg-4">
+        <label>Time</label>
+        <input type="time" class="form-control" @onchange="changeTime" /><br />
+        <label>Japanese</label>
+        <input class="form-control" type="text" @bind="@_japaneseTime" />
+    </div>
+</div>
+
+<table class="table table-striped">
+    <tbody>
+        <tr>
+            <th>English</th>
+            <th>Japanese</th>
+            <th>Traditional Japanese name</th>
+        </tr>
+        <tr>
+            <td>January</td>
+            <td>
+                <Speaker text="一月"></Speaker> ichigatsu
+            </td>
+            <td>
+                Mutsuki (睦月 "Month of Love," alternatively "Month of Affection")
+            </td>
+        </tr>
+        <tr>
+            <td>February</td>
+            <td>
+                <Speaker text="二月"></Speaker> nigatsu
+            </td>
+            <td>
+                Kisaragi (如月) or Kinusaragi (衣更着, "Changing Clothes")
+            </td>
+        </tr>
+        <tr>
+            <td>March</td>
+            <td>
+                <Speaker text="三月"></Speaker> sangatsu
+            </td>
+            <td>
+                Yayoi (弥生, "New Life")
+            </td>
+        </tr>
+        <tr>
+            <td>April</td>
+            <td>
+                <Speaker text="四月"></Speaker> shigatsu
+            </td>
+            <td>
+                Uzuki (卯月, "u-no-hana month"). The u-no-hana (卯の花) is a flower, of the genus Deutzia.
+            </td>
+        </tr>
+        <tr>
+            <td>May</td>
+            <td>
+                <Speaker text="五月"></Speaker> gogatsu
+            </td>
+            <td>
+                Satsuki (皐月) or Sanaetsuki (早苗月, "Early-rice-planting Month")
+            </td>
+        </tr>
+        <tr>
+            <td>June</td>
+            <td>
+                <Speaker text="六月"></Speaker> rokugatsu
+            </td>
+            <td>
+                Minazuki (水無月, "Month of Water"). The 無 character, which normally means "absent" or "there is no", is ateji here, and is only used for the na sound. In this name the na is actually a possessive particle, so minazuki means "month of water", not "month without water", and this is in reference to the flooding of the rice fields, which require large quantities of water.
+            </td>
+        </tr>
+        <tr>
+            <td>July</td>
+            <td>
+                <Speaker text="七月"></Speaker> shichigatsu
+            </td>
+            <td>
+                Fumizuki (文月, "Month of Erudition")
+            </td>
+        </tr>
+        <tr>
+            <td>August</td>
+            <td>
+                <Speaker text="八月"></Speaker> hachigatsu
+            </td>
+            <td>
+                Hazuki (葉月, "Month of Leaves"). In old Japanese, the month was called 葉落ち月 (Haochizuki, or "Month of Falling Leaves")
+            </td>
+        </tr>
+        <tr>
+            <td>September</td>
+            <td>
+                <Speaker text="九月"></Speaker> kugatsu
+            </td>
+            <td>
+                Nagatsuki (長月, "The Long Month")
+            </td>
+        </tr>
+        <tr>
+            <td>October</td>
+            <td>
+                <Speaker text="十月"></Speaker> jūgatsu
+            </td>
+            <td>
+                Kannazuki or Kaminazuki (神無月, Month of the Gods). The 無 character, which normally means "absent" or "there is not", was here probably originally used as ateji, that is used only for the sound "na". In this name the na is actually a possessive particle, so Kaminazuki means "Month of the Gods", not "Month without Gods" (Kaminakizuki), similarly to Minatsuki, the "Month of Water". However, by false etymology this became commonly interpreted to mean that because in that month all the Shinto kami gather at Izumo shrine in Izumo Province (modern-day Shimane Prefecture), there are no gods in the rest of the country. Thus in Izumo Province, the month is called Kamiarizuki (神有月 or 神在月, "Month with Gods"). This interpretation is the one commonly cited in western works.
+            </td>
+        </tr>
+        <tr>
+            <td>November</td>
+            <td>
+                <Speaker text="十一月"></Speaker> jūichigatsu
+            </td>
+            <td>
+                Shimotsuki (霜月, "Month of Frost")
+            </td>
+        </tr>
+        <tr>
+            <td>December</td>
+            <td>
+                <Speaker text="十二月"></Speaker> jūnigatsu
+            </td>
+            <td>
+                Shiwasu (師走, "Priests Running").  This is in reference to priests being busy at the end of the year for New Year's (Shogatsu) preparations and blessings.
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="row">
+    <div class="col-12">
+        <table class="table table-striped">
+            <tbody>
+                <tr>
+                    <th>Day</th>
+                    <th>Element</th>
+                    <th>Romanisation</th>
+                    <th>Japanese</th>
+                </tr>
+                @foreach (var day in Week.Days)
+                {
+                    <tr>
+                        <td>@day.Day</td>
+                        <td>
+                            @day.Element
+                        </td>
+                        <td>@day.Romanisation</td>
+                        <td>
+                            <Speaker text="@day.Japanese" showPlayButton="true"></Speaker>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <tbody>
+        <tr>
+            <th>Day number</th>
+            <th>Japanese name</th>
+            <th>
+                Romanisation
+            </th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>一日</td>
+            <td>
+                <Speaker text="tsuitachi"></Speaker><br>
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>二日</td>
+            <td>
+                futsuka
+            </td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>三日</td>
+            <td>
+                mikka
+            </td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>四日</td>
+            <td>
+                yokka
+            </td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>五日</td>
+            <td>
+                itsuka
+            </td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>六日</td>
+            <td>
+                muika
+            </td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td>七日</td>
+            <td>
+                nanoka
+            </td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td>八日</td>
+            <td>
+                yōka
+            </td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td>九日</td>
+            <td>
+                kokonoka
+            </td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td>十日</td>
+            <td>
+                tōka
+            </td>
+        </tr>
+        <tr>
+            <td>11</td>
+            <td><Speaker text="十一日"></Speaker></td>
+            <td>
+                jūichi-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>12</td>
+            <td><Speaker text="十二日"></Speaker></td>
+            <td>
+                jūni-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>13</td>
+            <td><Speaker text="十三日"></Speaker></td>
+            <td>
+                jūsan-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>14</td>
+            <td><Speaker text="十四日"></Speaker></td>
+            <td>
+                jūyokka<br>jūyon-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>15</td>
+            <td><Speaker text="十五日"></Speaker></td>
+            <td>
+                jūgo-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>16</td>
+            <td><Speaker text="十六日"></Speaker></td>
+            <td>
+                jūroku-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>17</td>
+            <td><Speaker text="十七日"></Speaker></td>
+            <td>
+                jūshichi-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>18</td>
+            <td><Speaker text="十八日"></Speaker></td>
+            <td>
+                jūhachi-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>19</td>
+            <td><Speaker text="十九日"></Speaker></td>
+            <td>
+                jūkyū-nichi<br>jūku-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>20</td>
+            <td><Speaker text="二十日"></Speaker></td>
+            <td>
+                hatsuka
+            </td>
+        </tr>
+        <tr>
+            <td>21</td>
+            <td><Speaker text="二十一日"></Speaker></td>
+            <td>
+                nijūichi-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>22</td>
+            <td><Speaker text="二十二日"></Speaker></td>
+            <td>
+                nijūni-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>23</td>
+            <td><Speaker text="二十三日"></Speaker></td>
+            <td>
+                nijūsan-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>24</td>
+            <td><Speaker text="二十四日"></Speaker></td>
+            <td>
+                nijūyokka<br>nijūyon-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>25</td>
+            <td><Speaker text="二十五日"></Speaker></td>
+            <td>
+                nijūgo-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>26</td>
+            <td><Speaker text="二十六日"></Speaker></td>
+            <td>
+                nijūroku-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>27</td>
+            <td><Speaker text="二十七日"></Speaker></td>
+            <td>
+                nijūshichi-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>28</td>
+            <td><Speaker text="二十八日"></Speaker></td>
+            <td>
+                nijūhachi-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>29</td>
+            <td><Speaker text="二十九日"></Speaker></td>
+            <td>
+                nijūkyū-nichi<br>nijūku-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>30</td>
+            <td><Speaker text="三十日"></Speaker></td>
+            <td>
+                sanjū-nichi
+            </td>
+        </tr>
+        <tr>
+            <td>31</td>
+            <td><Speaker text="三十一日"></Speaker></td>
+            <td>
+                sanjūichi-nichi
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<table class="table table-striped">
+    <tr>
+        <th>Sekki</th>
+        <th>Kanji</th>
+        <th>Period</th>
+    </tr>
+    <tr>
+        <td>Risshun</td>
+        <td>立春</td>
+        <td>February 4—Beginning of spring</td>
+    </tr>
+    <tr>
+        <td>Usui</td>
+        <td>雨水</td>
+        <td>February 19—Rain water</td>
+    </tr>
+    <tr>
+        <td>Keichitsu</td>
+        <td>啓蟄</td>
+        <td>March 5—Awakening of hibernated (insects)</td>
+    </tr>
+    <tr>
+        <td>Shunbun</td>
+        <td>春分</td>
+        <td>March 20—Vernal equinox, middle of spring</td>
+    </tr>
+    <tr>
+        <td>Seimei</td>
+        <td>清明</td>
+        <td>April 5—Clear and bright</td>
+    </tr>
+    <tr>
+        <td>Kokuu</td>
+        <td>穀雨</td>
+        <td>April 20—Grain rain</td>
+    </tr>
+    <tr>
+        <td>Rikka</td>
+        <td>立夏</td>
+        <td>May 5—Beginning of summer</td>
+    </tr>
+    <tr>
+        <td>Shōman</td>
+        <td>小満</td>
+        <td>May 21—Grain full</td>
+    </tr>
+    <tr>
+        <td>Bōshu</td>
+        <td>芒種</td>
+        <td>June 6—Grain in ear</td>
+    </tr>
+    <tr>
+        <td>Geshi</td>
+        <td>夏至</td>
+        <td>June 21—Summer solstice, middle of summer</td>
+    </tr>
+    <tr>
+        <td>Shōsho</td>
+        <td>小暑</td>
+        <td>July 7—Small heat</td>
+    </tr>
+    <tr>
+        <td>Taisho</td>
+        <td>大暑</td>
+        <td>July 23—Large heat</td>
+    </tr>
+    <tr>
+        <td>Risshū</td>
+        <td>立秋</td>
+        <td>August 7—Beginning of autumn</td>
+    </tr>
+    <tr>
+        <td>Shosho</td>
+        <td>処暑</td>
+        <td>August 23—Limit of heat</td>
+    </tr>
+    <tr>
+        <td>Hakuro</td>
+        <td>白露</td>
+        <td>September 7—White dew</td>
+    </tr>
+    <tr>
+        <td>Shūbun</td>
+        <td>秋分</td>
+        <td>September 23—Autumnal equinox, middle of autumn</td>
+    </tr>
+    <tr>
+        <td>Kanro</td>
+        <td>寒露</td>
+        <td>October 8—Cold dew</td>
+    </tr>
+    <tr>
+        <td>Sōkō</td>
+        <td>霜降</td>
+        <td>October 23—Frost descent</td>
+    </tr>
+    <tr>
+        <td>Rittō</td>
+        <td>立冬</td>
+        <td>November 7—Beginning of winter</td>
+    </tr>
+    <tr>
+        <td>Shōsetsu</td>
+        <td>小雪</td>
+        <td>November 22—Small snow</td>
+    </tr>
+    <tr>
+        <td>Taisetsu</td>
+        <td>大雪</td>
+        <td>December 7—Large snow</td>
+    </tr>
+    <tr>
+        <td>Tōji</td>
+        <td>冬至</td>
+        <td>December 22—Winter solstice, middle of winter</td>
+    </tr>
+    <tr>
+        <td>Shōkan</td>
+        <td>小寒</td>
+        <td>January 5—Small Cold; or Kan no iri (寒の入り)—Entrance of the cold</td>
+    </tr>
+    <tr>
+        <td>Daikan</td>
+        <td>大寒</td>
+        <td>January 20—Major cold</td>
+    </tr>
+</table>
+
+@code
+{
+    private DateTime _dateTime = DateTime.Now;
+    private DateOnly _dateOnly = new DateOnly(2000, 1, 1); // new DateOnly(_dateTime.Year, _dateTime.Month, _dateTime.Day);
+    private TimeOnly _timeOnly = new TimeOnly(12, 0, 0); // new TimeOnly(_dateTime.Hours, _dateTime.Minutes, _dateTime.Seconds);
+    private string _japaneseDateTime = "";
+    private string _japaneseDateTimeD = "";
+    private string _japaneseDateTimeF = "";
+    private string _japaneseDateTimeG = "";
+    private string _japaneseDate = "";
+    private string _japaneseTime = "";
+    private string _japaneseYear = "";
+    private string _era = "";
+    private JapaneseCalendar _calendar = new JapaneseCalendar();
+
+    private void changeDateTime(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value.ToString(), out _dateTime))
+        {
+            _japaneseDateTime = Japanese.ConvertToJapanese(_dateTime); // Japanese.ToJaCal(_dateTime);
+            _japaneseDateTimeD = _dateTime.ToString("D", Japanese.CultureInfo);
+            _japaneseDateTimeF = _dateTime.ToString("F", Japanese.CultureInfo);
+            _japaneseDateTimeG = _dateTime.ToString("G", Japanese.CultureInfo);
+            _japaneseYear = Japanese.GetJapaneseYear(_dateTime).ToString();
+            _era = _dateTime.ToString("gy", Japanese.CultureInfo); //_calendar.Eras[]
+        }
+    }
+
+    private void changeDate(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value.ToString(), out _dateOnly))
+        {
+            _japaneseDate = _dateOnly.ToString("D", Japanese.CultureInfo);
+        }
+    }
+
+    private void changeTime(ChangeEventArgs e)
+    {
+        if (TimeOnly.TryParse(e.Value.ToString(), out _timeOnly))
+        {
+            _japaneseTime = _timeOnly.ToString("T", Japanese.CultureInfo);
+        }
+    }
+}

@@ -1,0 +1,72 @@
+﻿@page "/cards"
+@using Sensei.Components
+@using Sensei.Data
+
+<PageTitle>Cards</PageTitle>
+
+<h1>Cards</h1>
+
+<div class="row">
+    <div class="col-6">
+        <div class="form-check form-switch">
+            <input id="flipHiragana" type="checkbox" class="form-check-input" role="switch" @bind="@flipHiragana" />
+            <label for="flipHiragana" class="form-check-label">Flip Hiragana</label>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="form-check form-switch">
+            <input id="flipKatakana" type="checkbox" class="form-check-input" role="switch" @bind="@flipKatakana" />
+            <label for="flipKatakana" class="form-check-label">Flip Katakana</label>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-6 col-sm-12 px-0">
+        @foreach (Card card in hiraganaCards)
+        {
+            <KanaCard Syllab="@card.Syllab" Kana="@card.Kana" flipped="@flipHiragana" />
+        }
+    </div>
+    <div class="col-lg-6 col-sm-12 px-0">
+        @foreach (Card card in katakanaCards)
+        {
+            <KanaCard Syllab="@card.Syllab" Kana="@card.Kana" flipped="@flipKatakana" />
+        }
+    </div>
+</div>
+
+@code {
+    protected List<Card> hiraganaCards { get; set; } = new List<Card>();
+    protected List<Card> katakanaCards { get; set; } = new List<Card>();
+    //protected Card currentCard { get; set; }
+    protected bool flipHiragana { get; set; }
+    protected bool flipKatakana { get; set; }
+
+    protected string direction { get; set; } = "H2R";
+
+    protected override void OnInitialized()
+    {
+        initializeCards();
+        //currentCard = hiraganaCards[0];
+    }
+
+    private void initializeCards()
+    {
+        var uniqueCards = new List<Card>();
+
+        foreach (var syllab in Syllables.Gojuon)
+        {
+            var hiragana = Syllables.RomajiToHiragana[syllab];
+            hiraganaCards.Add(new Card() { Syllab = syllab, Kana = hiragana });
+
+            var katakana = Syllables.RomajiToKatakana[syllab];
+            katakanaCards.Add(new Card() { Syllab = syllab, Kana = katakana });
+        }
+    }
+
+    public async Task flip(Card card)
+    {
+        card.Flipped = !card.Flipped;
+        await Task.Delay(100);
+    }
+}
