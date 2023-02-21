@@ -1,0 +1,84 @@
+﻿@page "/kanji/{Value}"
+@using System.Diagnostics
+@using System.Net
+@using JishoNET
+@using JishoNET.Models;
+@using Sensei.Components
+@using Sensei.Data
+@using System.Text.Json;
+@inject JishoHttpClient Http
+@inject IHttpClientFactory ClientFactory
+
+<PageTitle>Kanji @Value</PageTitle>
+
+<h1>Kanji @Value : @_transliteration</h1>
+
+<div class="row">
+    @if (_kanjiDefinition != null)
+    {
+        <div class="col-sm-3">
+            <h2 class="kanjiStrokeOrders display-1">@Value</h2>
+            <img src="img/kanji/gif/@(Value).gif" style="height:100px" /><br />
+            @*@_kanjiDefinition.Jlpt*@
+            @*<h3>SVG</h3>
+        <svg width="100" height="100">
+        @foreach (var path in _kanjiEntry.StrokePaths)
+        {
+        <path d="@((MarkupString)path)" />
+        }
+        </svg>
+        <br />*@
+        </div>
+    }
+</div>
+@code
+{
+    [Parameter]
+    public string Value { get; set; }
+    public string _transliteration;
+    public JishoDefinition _kanjiDefinition;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var sw = Stopwatch.StartNew();
+        var result = await GetDefinitionAsync(Value);
+        if (result.Success)
+        {
+            _kanjiDefinition = result.Data.FirstOrDefault();
+        }
+        var d1 = sw.Elapsed;
+    }
+
+    private static readonly string baseUrl = new("https://jisho.org/api/v1/search/words?keyword=");
+
+    public async Task<JishoResult<JishoDefinition[]>> GetDefinitionAsync(string keyword)
+    {
+        try
+        {
+            //HttpClient client = new HttpClient();
+            var client = ClientFactory.CreateClient("jisho");
+
+            HttpRequestMessage httpRequestMessage = new HttpRequestMessage { RequestUri = new Uri(baseUrl + keyword), Method = HttpMethod.Get };
+            httpRequestMessage.SetBrowserRequestMode(BrowserRequestMode.NoCors);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage); //client.GetAsync(baseUrl + keyword);
+            JishoResult<JishoDefinition[]> result = new JishoResult<JishoDefinition[]>();
+            if (response.IsSuccessStatusCode)
+            {
+                var stringResponse = await response.Content.ReadAsStringAsync();
+                //JishoResult<JishoDefinition[]> result = await client.GetFromJsonAsync<JishoResult<JishoDefinition[]>>(baseUrl + keyword);
+                result = JsonSerializer.Deserialize<JishoResult<JishoDefinition[]>>(stringResponse);
+                result.Meta.Status = ((int)response.StatusCode);
+                result.Success = true;
+            }
+            return result;
+        }
+        catch (Exception e)
+        {
+            return new JishoResult<JishoDefinition[]>
+                {
+                    Success = false,
+                    Exception = e.ToString()
+                };
+        }
+    }
+}
