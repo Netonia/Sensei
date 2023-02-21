@@ -12,7 +12,7 @@
             @if (showMnemonic && Syllables.HiraganaMnemonics.ContainsKey(syllab))
             {
                 <br />
-                <a href="/kana/@syllab">
+                <a href="./kana/@syllab">
                     <img src="img/hiragana/mnemonics-jp/@(Syllables.RomajiToHiragana[syllab]).jpg" style="width:40px" />
                 </a>
                 <br />
@@ -28,7 +28,7 @@
             @if (showMnemonic && Syllables.KatakanaMnemonics.ContainsKey(syllab))
             {
                 <br />
-                <a href="/kana/@syllab">
+                <a href="./kana/@syllab">
                     <img src="img/katakana/mnemonics-jp/@(Syllables.RomajiToKatakana[syllab]).jpg" style="width:40px" />
                 </a>
                 <br />
