@@ -1,0 +1,254 @@
+﻿@page "/transliterate"
+@using Sensei.Data
+@*@using Kawazu*@
+@using Toolbelt.Blazor.SpeechSynthesis
+@using WanaKanaNet
+@inject SpeechSynthesis SpeechSynthesis
+
+<PageTitle>Transliteration</PageTitle>
+
+<h1>Transliteration</h1>
+
+<div class="row">
+    <div class="col-lg-3">
+        <label>Rōmaji</label>
+        @if (!string.IsNullOrEmpty(_romaji))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakRomaji"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+            @*<a href="/read/@_romaji">Read</a>*@
+        }
+        <input class="form-control" @onchange="transliterateFromRomaji" placeholder="Enter Rōmaji" />
+
+        <label>Hiragana</label>
+        @if (!string.IsNullOrEmpty(_romajiToHiragana))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakRomajiToHiragana"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @bind="@_romajiToHiragana" />
+
+        <label>Katakana</label>
+        @if (!string.IsNullOrEmpty(_romajiToKatakana))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakRomajiToKatakana"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @bind="@_romajiToKatakana" />
+    </div>
+
+    <div class="col-lg-3">
+        <label>Hiragana</label>
+        @if (!string.IsNullOrEmpty(_hiragana))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakHiragana"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @onchange="transliterateFromHiragana" placeholder="Enter Hiragana" />
+
+        <label>Katakana</label>
+        @if (!string.IsNullOrEmpty(_hiraganaToKatakana))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakHiraganaToKatakana"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @bind="@_hiraganaToKatakana" />
+
+        <label>Rōmaji</label>
+        @if (!string.IsNullOrEmpty(_hiraganaToRomaji))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakHiraganaToRomaji"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @bind="@_hiraganaToRomaji" />
+    </div>
+    <div class="col-lg-3">
+        <label>Katakana</label>
+        @if (!string.IsNullOrEmpty(_katakana))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakKatakana"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @onchange="transliterateFromKatakana" placeholder="Enter Katakana" />
+
+        <label>Hiragana</label>
+        @if (!string.IsNullOrEmpty(_katakanaToHiragana))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakKatakanaToHiragana"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @bind="@_katakanaToHiragana" />
+
+        <label>Rōmaji</label>
+        @if (!string.IsNullOrEmpty(_katakanaToRomaji))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakKatakanaToRomaji"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @bind="@_katakanaToRomaji" />
+    </div>
+    <div class="col-lg-3">
+        <label>Kanji</label>
+        @if (!string.IsNullOrEmpty(_kanji))
+        {
+            <button class="btn btn-light btn-sm" @onclick="speakKanji"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+        }
+        <input class="form-control" @onchange="convert" maxlength="16" placeholder="Enter Kanji" />
+        <label>Romaji</label>
+        <input class="form-control" @bind="@_romaji" />
+        <label>Hiragana</label>
+        <input class="form-control" @bind="@_hiragana" />
+        @*<label>Katakana</label>
+        <input class="form-control" @bind="@_katakana" />*@
+    </div>
+</div>
+<br />
+<div class="row">
+    <div class="col-lg-3">
+        <label>Check characters</label>
+        <input class="form-control" @onchange="check" placeholder="Enter text" />
+    </div>
+</div>
+<div class="row ms-2">
+    <div class="col-2">
+        <input type="checkbox" disabled class="form-check-input" @bind="@_isRomaji" />
+        <label class="form-check-label">Romaji</label>
+    </div>
+    <div class="col-lg-2">
+        <input type="checkbox" disabled class="form-check-input" @bind="@_isJapanese" />
+        <label class="form-check-label">Japanese</label>
+    </div>
+    <div class="col-lg-2">
+        <input type="checkbox" disabled class="form-check-input" @bind="@_isHiragana" />
+        <label class="form-check-label">Hiragana</label>
+    </div>
+    <div class="col-lg-2">
+        <input type="checkbox" disabled class="form-check-input" @bind="@_isKatakana" />
+        <label class="form-check-label">Katakana</label>
+    </div>
+    <div class="col-lg-2">
+        <input type="checkbox" disabled class="form-check-input" @bind="@_isKana" />
+        <label class="form-check-label">Kana</label>
+    </div>
+    <div class="col-lg-2">
+        <input type="checkbox" disabled class="form-check-input" @bind="@_isKanji" />
+        <label class="form-check-label">Kanji</label>
+    </div>
+</div>
+
+@code
+{
+    private string _romaji = "";
+    private string _hiragana = "";
+    private string _katakana = "";
+    private string _romajiToHiragana = "";
+    private string _romajiToKatakana = "";
+    private string _hiraganaToKatakana = "";
+    private string _hiraganaToRomaji = "";
+    private string _katakanaToHiragana = "";
+    private string _katakanaToRomaji = "";
+    private string _kanji = "";
+
+    private bool _isRomaji = false;
+    private bool _isJapanese = false;
+    private bool _isHiragana = false;
+    private bool _isKatakana = false;
+    private bool _isKana = false;
+    private bool _isKanji = false;
+
+    private async Task speech(string text)
+    {
+        var utterancet = new SpeechSynthesisUtterance { Text = text, Lang = Japanese.CultureName, Pitch = 1.0, Rate = 1.0, Volume = 1.0 };
+        await SpeechSynthesis.SpeakAsync(utterancet);
+    }
+
+    private async Task speakKanji()
+    {
+        await speech(_kanji);
+    }
+    private async Task speakRomaji()
+    {
+        await speech(_romaji);
+    }
+
+    private async Task speakRomajiToHiragana()
+    {
+        await speech(_romajiToHiragana);
+    }
+
+    private async Task speakRomajiToKatakana()
+    {
+        await speech(_romajiToKatakana);
+    }
+
+    private async Task speakHiragana()
+    {
+        await speech(_hiragana);
+    }
+
+    private async Task speakHiraganaToRomaji()
+    {
+        await speech(_hiraganaToRomaji);
+    }
+
+    private async Task speakHiraganaToKatakana()
+    {
+        await speech(_hiraganaToKatakana);
+    }
+
+    private async Task speakKatakana()
+    {
+        await speech(_katakana);
+    }
+
+    private async Task speakKatakanaToHiragana()
+    {
+        await speech(_katakanaToHiragana);
+    }
+
+    private async Task speakKatakanaToRomaji()
+    {
+        await speech(_katakanaToRomaji);
+    }
+
+    private void check(ChangeEventArgs e)
+    {
+        _isRomaji = WanaKana.IsRomaji(e.Value.ToString());
+        //_isJapanese = Utilities.HasJapanese(e.Value.ToString());
+        //_isHiragana = Utilities.HasHiragana(e.Value.ToString());
+        //_isKatakana = Utilities.HasKatakana(e.Value.ToString());
+        //_isKana = Utilities.HasKana(e.Value.ToString());
+        //_isKanji = Utilities.HasKanji(e.Value.ToString());
+    }
+
+    private void transliterateFromRomaji(ChangeEventArgs e)
+    {
+        _romaji = e.Value.ToString().Trim();
+        _romajiToHiragana = WanaKana.ToHiragana(_romaji);
+        _romajiToKatakana = WanaKana.ToKatakana(_romaji);
+    }
+
+    private void transliterateFromHiragana(ChangeEventArgs e)
+    {
+        _hiragana = e.Value.ToString().Trim();
+        if (WanaKana.IsHiragana(_hiragana))
+        {
+            _hiraganaToKatakana = WanaKana.ToKatakana(e.Value.ToString());
+            _hiraganaToRomaji = WanaKana.ToRomaji(_hiragana);
+        }
+    }
+
+    private void transliterateFromKatakana(ChangeEventArgs e)
+    {
+        _katakana = e.Value.ToString().Trim();
+        if (WanaKana.IsKatakana(_katakana))
+        {
+            _katakanaToHiragana = WanaKana.ToHiragana(e.Value.ToString());
+            _katakanaToRomaji = WanaKana.ToRomaji(e.Value.ToString());
+        }
+    }
+
+    private async void convert(ChangeEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(e.Value.ToString()))
+        {
+            _kanji = e.Value.ToString().Trim();
+            //var converter = new KawazuConverter();
+            //_romaji = await converter.Convert(e.Value.ToString(), To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+            //_hiragana = await converter.Convert(e.Value.ToString(), To.Hiragana, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+            //_katakana = await converter.Convert(e.Value.ToString(), To.Katakana, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+            StateHasChanged();
+        }
+    }
+}

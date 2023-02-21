@@ -1,0 +1,20 @@
+@using Sensei.Data
+
+@if (showHiragana)
+{
+    <Speaker text="@Syllables.RomajiToHiragana[sound]"></Speaker>
+    <br />
+}
+@if (showKatakana)
+{
+    <Speaker text="@Syllables.RomajiToKatakana[sound]"></Speaker>
+    <br />
+}
+@code {
+    [Parameter]
+    public string sound { get; set; }
+    [Parameter]
+    public bool showHiragana { get; set; } = false;
+    [Parameter]
+    public bool showKatakana { get; set; } = false;
+}

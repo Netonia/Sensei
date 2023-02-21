@@ -1,0 +1,98 @@
+﻿@page "/read/{sounds}"
+@using Sensei.Components
+@using Sensei.Data;
+@using WanaKanaNet
+
+<PageTitle>Read</PageTitle>
+
+<h1>Read @Sounds @*<Player sound="@Sounds" />*@</h1>
+
+<div class="row">
+    <div class="col-lg-3 text-center">
+        <input id="showHiragana" type="checkbox" class="form-check-input" @bind="@_showHiragana" />
+        <label for="showHiragana" class="form-check-label">Show Hiragana</label>
+    </div>
+    <div class="col-lg-3 text-center">
+        <input id="showMnemonics" type="checkbox" class="form-check-input" @bind="@_showMnemonics" />
+        <label for="showMnemonics" class="form-check-label">Show Mnemonics</label>
+    </div>
+    <div class="col-lg-3 text-center">
+        <input id="showKatakana" type="checkbox" class="form-check-input" @bind="@_showKatakana" />
+        <label for="showKatakana" class="form-check-label">Show Katakana</label>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-3 text-center">
+        @foreach (var syllab in _syllabs)
+        {
+            @if (_showHiragana)
+            {
+                @syllab
+                <br />
+                <Speaker text="@Syllables.RomajiToHiragana[syllab]"></Speaker>
+                <br />
+            }
+        }
+    </div>
+    <div class="col-lg-3 text-center">
+        @foreach (var syllab in _syllabs)
+        {
+            @if (_showHiragana)
+            {
+                @if (_showMnemonics)
+                {
+                    if (Syllables.HiraganaMnemonics.ContainsKey(syllab))
+                    {
+                        @*@Syllabs.HiraganaMnemonics[syllab]*@
+                        <img src="img/hiragana/mnemonics-jp/@(Syllables.RomajiToHiragana[syllab]).jpg" style="height:55px" />
+                    }
+                }
+                <br />
+            }
+        }
+    </div>
+    <div class="col-lg-3 text-center">
+        @foreach (var syllab in _syllabs)
+        {
+            @if (_showKatakana)
+            {
+                @syllab
+                <br />
+                <Speaker text="@Syllables.RomajiToKatakana[syllab]"></Speaker>
+                <br />
+            }
+        }
+    </div>
+    <div class="col-lg-3 text-center">
+        @foreach (var syllab in _syllabs)
+        {
+            @if (_showKatakana)
+            {
+                @if (_showMnemonics)
+                {
+                    if (Syllables.KatakanaMnemonics.ContainsKey(syllab))
+                    {
+                        @*@Syllabs.KatakanaMnemonics[syllab]*@
+                        <img src="img/katakana/mnemonics-jp/@(Syllables.RomajiToKatakana[syllab]).jpg" style="height:55px" />
+                    }
+                }
+                <br />
+            }
+        }
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public string Sounds { get; set; }
+    private bool _showHiragana = true;
+    private bool _showKatakana = true;
+    private bool _showMnemonics = false;
+    private string[] _syllabs;
+
+    protected override void OnInitialized()
+    {
+        _syllabs = Japanese.SplitSounds(Sounds);
+    }
+}

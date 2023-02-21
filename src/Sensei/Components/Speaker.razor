@@ -1,0 +1,40 @@
+@using Sensei.Data
+@*@using Kawazu*@
+@using Toolbelt.Blazor.SpeechSynthesis
+@inject SpeechSynthesis SpeechSynthesis
+
+@if (!string.IsNullOrEmpty(text) && showPlayButton)
+{
+    <button class="btn btn-light btn-sm" @onclick="speak"><span class="oi oi-media-play" aria-hidden="true"></span></button>
+}
+@text
+@if (showRomaji)
+{
+    <span class="m-1">@Convert(text)</span>
+}
+@code
+{
+    [Parameter]
+    public string text { get; set; }
+    [Parameter]
+    public bool showPlayButton { get; set; }
+    [Parameter]
+    public bool showRomaji { get; set; }
+
+    private string Convert(string text)
+    {
+        //if (!string.IsNullOrEmpty(text))
+        //{
+        //    var converter = new KawazuConverter();
+        //    return Task.Run(() => converter.Convert(text, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")")).Result;
+        //}
+
+        return "";
+    }
+
+    private async Task speak()
+    {
+        var utterancet = new SpeechSynthesisUtterance { Text = text, Lang = Japanese.CultureName, Pitch = 1.0, Rate = 1.0, Volume = 1.0 };
+        await SpeechSynthesis.SpeakAsync(utterancet);
+    }
+}
