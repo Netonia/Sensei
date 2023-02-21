@@ -23,7 +23,7 @@
     @*<div class="col-6">
     @foreach (var radical in _kanjiToRadicals)
     {
-    <a href="/radical/@radical.Key">@radical.Key</a>
+    <a href="./radical/@radical.Key">@radical.Key</a>
     @foreach (var value in radical.Value)
     {
     <span class="badge badge-primary m-1">@value</span>

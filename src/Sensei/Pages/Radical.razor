@@ -8,7 +8,7 @@
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/radicals">Radicals</a></li>
+        <li class="breadcrumb-item"><a href="./radicals">Radicals</a></li>
         <li class="breadcrumb-item active" aria-current="page">@Value</li>
     </ol>
 </nav>
@@ -25,7 +25,7 @@
             <h2>Kanji</h2>
             @foreach (var radical in _radicals)
             {
-                <a href="/kanji/@radical">@radical</a>
+                <a href="./kanji/@radical">@radical</a>
                 <br />
             }
         }
@@ -35,7 +35,7 @@
         {
             @foreach (var kanji in _kanjis)
             {
-                <a class="m-1" href="/kanji/@kanji">@kanji</a>
+                <a class="m-1" href="./kanji/@kanji">@kanji</a>
             }
         }
     </div>

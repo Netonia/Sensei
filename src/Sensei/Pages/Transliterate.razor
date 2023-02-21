@@ -15,7 +15,7 @@
         @if (!string.IsNullOrEmpty(_romaji))
         {
             <button class="btn btn-light btn-sm" @onclick="speakRomaji"><span class="oi oi-media-play" aria-hidden="true"></span></button>
-            @*<a href="/read/@_romaji">Read</a>*@
+            @*<a href="./read/@_romaji">Read</a>*@
         }
         <input class="form-control" @onchange="transliterateFromRomaji" placeholder="Enter Rōmaji" />
 
