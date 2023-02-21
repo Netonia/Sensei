@@ -99,3 +99,65 @@ a, .btn-link {
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
     }
+
+.flip-card {
+    background-color: transparent;
+    width: 8vw;
+    height: 8vw;
+    perspective: 1000px;
+    display: inline-block;
+    margin-left: 4px;
+    margin-right: 4px;
+}
+@media only screen and (max-width: 600px) {
+    .flip-card {
+        width: 16vw;
+        height: 16vw;
+    }
+}
+.flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+    background-color: #00a1ff;
+}
+
+.flip-card-front, .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    cursor: help;
+}
+
+.flip-card-front {
+    color: white;
+    font-size: 3vw;
+}
+
+.flip-card-back {
+    transform: rotateY(180deg);
+    color: white;
+    /*font-size: 3vw;*/
+}
+
+.chart td {
+    vertical-align: top;
+}
+
+.chart th {
+    width: 10%;
+}
+
+@font-face {
+    font-family: KanjiStrokeOrders;
+    src: url(../font/KanjiStrokeOrders_v4.004.ttf);
+}
+
+.kanjiStrokeOrders {
+    font-family: KanjiStrokeOrders;
+}
