@@ -1,0 +1,35 @@
+@page "/kanji"
+@using Sensei.Data
+
+<PageTitle>Kanji</PageTitle>
+
+<h1>Kanji</h1>
+<div class="row">
+    <div class="col-12">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Kanji</th>
+                    <th>Kun'yomi</th>
+                    <th>On'yomi</th>
+                    <th>Meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in _results)
+                {
+                    <tr>
+                        <td><a href="/kanji/@entry.Literal" style="text-decoration: none;">@entry.Literal</a></td>
+                        <td>@entry.Kun</td>
+                        <td>@entry.On</td>
+                        <td>@(String.Join(", ", entry.Meanings))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+@code
+{
+    private KanjiResult[] _results = KanjiDict.JLPT4;
+}

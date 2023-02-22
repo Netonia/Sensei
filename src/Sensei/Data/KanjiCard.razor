@@ -1,0 +1,31 @@
+﻿@using Sensei.Data
+
+<div class="flip-card">
+    <div class="flip-card-inner" style=@(flipped ? "transform: rotateY(180deg);" : "")>
+        <div class="flip-card-front" @onclick="() => flip()">
+            <h2 class="display-5 mt-2">@front</h2>
+            @frontDescription
+            <a href="./kanji/@front" class="text-light fs-1">...</a>
+        </div>
+        <div class="flip-card-back" @onclick="() => flip()">
+            @back
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string back { get; set; }
+    [Parameter]
+    public string front { get; set; }
+    [Parameter]
+    public string frontDescription { get; set; }
+    [Parameter]
+    public bool flipped { get; set; }
+
+    public async Task flip()
+    {
+        flipped = !flipped;
+        await Task.Delay(100);
+    }
+}

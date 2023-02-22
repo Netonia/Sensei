@@ -1,0 +1,55 @@
+@page "/kanji/{Value}"
+@using System.Diagnostics
+@using System.Net
+@using Sensei.Data
+@using Sensei.Components
+
+<PageTitle>Kanji @Value</PageTitle>
+
+<h1><a href="./kanji">Kanji</a> @Value</h1>
+
+<div class="row">
+    @if (_kanjiEntry != null)
+    {
+        <div class="col-sm-3">
+            <h2 class="kanjiStrokeOrders display-1">@_kanjiEntry.Literal</h2>
+            <img src="img/kanji/gif/@(Value).gif" style="height:100px" /><br />
+            <h3>Strokes</h3> @_kanjiEntry.StrokeCount
+            <br />
+            @if (_kanjiEntry.JLPT.HasValue)
+            {
+                <h3>JLPT</h3>
+                @_kanjiEntry.JLPT
+                <br />
+            }
+            </div>
+            <div class="col-sm-3">
+                <h3>Kun</h3>
+            @_kanjiEntry.Kun
+            </div>
+            <div class="col-sm-3">
+                <h3>On</h3>
+            @_kanjiEntry.On
+            </div>
+        <div class="col-sm-3">
+            <h3>Meanings</h3>
+            <ul class="list-unstyled">
+                @foreach (var meaning in _kanjiEntry.Meanings)
+                {
+                    <li>@meaning</li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+@code
+{
+    [Parameter]
+    public string Value { get; set; }
+    private KanjiResult _kanjiEntry;
+
+    protected override void OnInitialized()
+    {
+        _kanjiEntry = KanjiDict.JLPT4.FirstOrDefault(k => k.Literal == Value);
+    }
+}

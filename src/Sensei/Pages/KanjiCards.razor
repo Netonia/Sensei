@@ -1,0 +1,71 @@
+﻿@page "/kanjicards"
+@using Sensei.Components
+@using Sensei.Data
+
+<PageTitle>Kanji</PageTitle>
+
+<h1>Kanji @_JLPTKanji.Count()</h1>
+
+<div class="row">
+    <div class="col-4 text-center">
+        <input id="flip" type="checkbox" class="form-check-input" @bind="@flip" />
+        <label for="flip" class="form-check-label">Flip</label>
+    </div>
+    <div class="col-4 text-center">
+        <input id="showMeaning" type="checkbox" class="form-check-input" @bind="@showFrench" />
+        <label for="showFrench" class="form-check-label">Signification</label>
+    </div>
+    <div class="col-4 text-center">
+        <input id="showJapanese" type="checkbox" class="form-check-input" @bind="@showJapanese" />
+        <label for="showJapanese" class="form-check-label">Japonais (Kunyomi - Onyomi)</label>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12">
+        @foreach (var kanji in _JLPTKanji)
+        {
+            var front = kanji.Literal;
+            var back = "";
+            if (showFrench)
+            {
+                back += kanji.Meanings.FirstOrDefault();
+            }
+            if (showJapanese)
+            {
+                back += " - " + kanji.Kun + " - " + kanji.On;
+            }
+            <KanjiCard front="@front" back="@back" flipped="@flip" />
+        }
+    </div>
+</div>
+@code
+{
+    protected bool flip { get; set; }
+    protected bool showFrench { get; set; } = true;
+    protected bool showJapanese { get; set; } = true;
+    private KanjiResult[] _JLPTKanji = KanjiDict.JLPT4; //new List<KanjiResult>();
+
+    protected override void OnInitialized()
+    {
+        //_kanjiEntries = KanjiDictionary.ParseEntries().ToList();
+
+        //@foreach (var kanji in KanjiList.JLPT5.Union(KanjiList.MoreJLPT5).Union(KanjiList.JLPT4))
+        //{
+        //    var kanjiSymbol = new KanjiSymbol(kanji);
+        //    var entry = _kanjiEntries.FirstOrDefault(k => k.Literal == kanji);
+        //    if (entry != null)
+        //    {
+        //        var english = entry.Meanings.Where(m => m.Language == Language.English).Select(s => s.Term).ToArray();
+        //        kanjiSymbol.English = string.Join(", ", english);
+        //        var french = entry.Meanings.Where(m => m.Language == Language.French).Select(s => s.Term).ToArray();
+        //        kanjiSymbol.French = string.Join(", ", french);
+        //        var kunyomi = entry.Readings.Where(r => r.Type == ReadingType.JapaneseKun).Select(s => $"{s.Value} ({WanaKana.ToRomaji(s.Value)})").ToArray();
+        //        kanjiSymbol.Kunyomi = string.Join(", ", kunyomi); // kunyomi.FirstOrDefault(); //
+        //        var onyomi = entry.Readings.Where(r => r.Type == ReadingType.JapaneseOn).Select(s => $"{s.Value} ({WanaKana.ToRomaji(s.Value)})").ToArray();
+        //        kanjiSymbol.Onyomi = string.Join(", ", onyomi); // onyomi.FirstOrDefault(); //
+        //        kanjiSymbol.StrokeCount = entry.StrokeCount;
+        //    }
+        //    _JLPTKanji.Add(kanjiSymbol);
+        //}
+    }
+}
