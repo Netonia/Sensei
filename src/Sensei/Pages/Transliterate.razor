@@ -86,9 +86,9 @@
         }
         <input class="form-control" @onchange="convert" maxlength="16" placeholder="Enter Kanji" />
         <label>Romaji</label>
-        <input class="form-control" @bind="@_romaji" />
+        <input class="form-control" @bind="@_kanjiToRomaji" />
         <label>Hiragana</label>
-        <input class="form-control" @bind="@_hiragana" />
+        <input class="form-control" @bind="@_kanjiToHiragana" />
         @*<label>Katakana</label>
         <input class="form-control" @bind="@_katakana" />*@
     </div>
@@ -139,6 +139,8 @@
     private string _katakanaToHiragana = "";
     private string _katakanaToRomaji = "";
     private string _kanji = "";
+    private string _kanjiToRomaji = "";
+    private string _kanjiToHiragana = "";
 
     private bool _isRomaji = false;
     private bool _isJapanese = false;
@@ -244,6 +246,8 @@
         if (!string.IsNullOrEmpty(e.Value.ToString()))
         {
             _kanji = e.Value.ToString().Trim();
+            _kanjiToRomaji = WanaKana.ToRomaji(_kanji);
+            _kanjiToHiragana = WanaKana.ToHiragana(_kanji);
             //var converter = new KawazuConverter();
             //_romaji = await converter.Convert(e.Value.ToString(), To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
             //_hiragana = await converter.Convert(e.Value.ToString(), To.Hiragana, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
