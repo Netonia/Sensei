@@ -19,7 +19,7 @@
                 @foreach (var entry in _results)
                 {
                     <tr>
-                        <td><a href="/kanji/@entry.Literal" style="text-decoration: none;">@entry.Literal</a></td>
+                        <td><a href="./kanji/@entry.Literal" style="text-decoration: none;">@entry.Literal</a></td>
                         <td>@entry.Kun</td>
                         <td>@entry.On</td>
                         <td>@(String.Join(", ", entry.Meanings))</td>
