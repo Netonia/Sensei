@@ -14,6 +14,7 @@
 		<PackageReference Include="MyNihongo.KanaConverter" Version="1.0.1" />
 		<PackageReference Include="Toolbelt.Blazor.SpeechSynthesis" Version="10.0.0" />
 		<PackageReference Include="WanaKana-net" Version="1.0.0" />
+		<PackageReference Include="WanaKanaSharp" Version="0.2.0" />
 	</ItemGroup>
 
 </Project>

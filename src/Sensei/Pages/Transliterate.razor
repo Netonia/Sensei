@@ -246,8 +246,10 @@
         if (!string.IsNullOrEmpty(e.Value.ToString()))
         {
             _kanji = e.Value.ToString().Trim();
-            _kanjiToRomaji = WanaKana.ToRomaji(_kanji);
-            _kanjiToHiragana = WanaKana.ToHiragana(_kanji);
+            var romajiConverter = new WanaKanaSharp.RomajiConverter();
+            //WanaKanaSharp.WanaKana.IsKanji(_kanji).ToString();
+            _kanjiToRomaji = WanaKana.ToRomaji(_kanji); // WanaKanaSharp.WanaKana.ToRomaji(_kanji); // 
+            _kanjiToHiragana = WanaKana.ToHiragana(_kanji); // WanaKanaSharp.WanaKana.ToKana(_kanji); // 
             //var converter = new KawazuConverter();
             //_romaji = await converter.Convert(e.Value.ToString(), To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
             //_hiragana = await converter.Convert(e.Value.ToString(), To.Hiragana, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
