@@ -1,0 +1,34 @@
+﻿@using Sensei.Data
+@using Sensei.Models
+
+<div class="row">
+    <div class="col-12">
+        <RadzenDataGrid FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.Or" AllowColumnPicking="true" AllowColumnResize="true" AllowPaging="true" AllowSorting="true" PageSize="150" Data="@words" TItem="Word">
+            @*AllowColumnReorder="true" AllowFiltering="true"*@
+            <Columns>
+                <RadzenDataGridColumn TItem="Word" Property="Category" Title="Category" Visible="false" />
+                <RadzenDataGridColumn TItem="Word" Title="Japanese" Sortable="false">
+                    <HeaderTemplate>
+                        @words.Count words
+                    </HeaderTemplate>
+                    <Template Context="data">
+                        <Speaker text="@data.Japanese" showPlayButton="true"></Speaker>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Word" Title="Kana" Visible="false">
+                    <Template Context="data">
+                        @data.Kana
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Word" Property="Romaji" Title="Romaji" Visible="false" />
+                <RadzenDataGridColumn TItem="Word" Property="Meaning" Title="Meaning" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public List<Word> words { get; set; }
+}

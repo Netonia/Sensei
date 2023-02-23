@@ -1,0 +1,34 @@
+﻿@page "/learn"
+@using Sensei.Components
+@using Sensei.Data
+@using Sensei.Models
+@using WanaKanaNet
+
+<PageTitle>Learn</PageTitle>
+
+<RadzenDataGrid FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.Or" AllowColumnPicking="true" AllowColumnResize="true" AllowPaging="true" Data="@_JLPTKanji" TItem="KanjiResult" PageSize="150">
+    @*AllowColumnReorder="true" *@
+    <Columns>
+        <RadzenDataGridColumn TItem="KanjiResult" Title="Kanji" Sortable="false" Filterable="true" Width="80px">
+            <HeaderTemplate>
+                @_JLPTKanji.Count Kanji
+            </HeaderTemplate>
+            <Template Context="data">
+                <a href="/kanji/@data.Literal">@data.Literal</a>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="KanjiResult" Property="Kun" Title="Kunyomi" Visible="false" />
+        <RadzenDataGridColumn TItem="KanjiResult" Property="On" Title="Onyomi" Visible="false" />
+        @*<RadzenDataGridColumn TItem="KanjiResult" Property="French" Title="Traduction" />*@
+        @*<RadzenDataGridColumn TItem="KanjiResult" Property="StrokeCount" Title="S" Visible="false" />*@
+    </Columns>
+</RadzenDataGrid>
+@code
+{
+    private string _message = "";
+    private List<KanjiResult> _JLPTKanji = KanjiDict.JLPT4.ToList();
+
+    protected override void OnInitialized()
+    {
+    }
+}

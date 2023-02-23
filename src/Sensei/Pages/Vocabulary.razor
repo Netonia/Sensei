@@ -1,0 +1,38 @@
+﻿@page "/vocabulary"
+@using Sensei.Components
+@using Sensei.Data
+@using Sensei.Models
+@*@using Kawazu*@
+
+<PageTitle>Vocabulary</PageTitle>
+
+<h1>Vocabulary</h1>
+
+@*<RadzenTabs style="height: 100%; width: 100%;" RenderMode="TabRenderMode.Client">
+    <Tabs>
+        <RadzenTabsItem Text="Animals">
+            <WordGrid words="Words.Animals"></WordGrid>
+        </RadzenTabsItem>
+        <RadzenTabsItem Text="Colors">
+            <WordGrid words="Words.Colors"></WordGrid>
+        </RadzenTabsItem>
+    </Tabs>
+</RadzenTabs>*@
+<WordGrid words="_commonWords"></WordGrid>
+
+@code
+{
+    private List<Word> _commonWords = new List<Word>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _commonWords = Words.All();
+
+        //var converter = new KawazuConverter();
+        //@foreach (var word in _commonWords)
+        //{
+        //    word.Kana = await converter.Convert(word.Japanese, To.Hiragana, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+        //    word.Romaji = await converter.Convert(word.Japanese, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+        //}
+    }
+}

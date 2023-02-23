@@ -1,0 +1,29 @@
+@page "/particles"
+@using Sensei.Components
+@using Sensei.Data
+@using Sensei.Models
+
+<PageTitle>Particles</PageTitle>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>@(_particles.Count)&nbsp;Particles</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var entry in _particles)
+        {
+            <tr>
+                <td>@entry.Kana</td>
+                <td>@entry.Description</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code
+{
+    private List<Particle> _particles = ParticleList.Particles;
+}

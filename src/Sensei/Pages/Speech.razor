@@ -1,0 +1,31 @@
+﻿@page "/speech"
+@using Sensei.Data
+@using Toolbelt.Blazor.SpeechSynthesis
+@using WanaKanaNet
+@inject SpeechSynthesis SpeechSynthesis
+
+<PageTitle>Speech</PageTitle>
+
+<h1>Speech</h1>
+
+<div class="row">
+    <div class="col-3">
+        <label>Text</label>
+        <input class="form-control" @bind="@_text" />
+    </div>
+    <div class="col-1 text-center">
+        <br />
+        <button class="btn btn-primary" @onclick="speak">Speak</button>
+    </div>
+</div>
+
+@code
+{
+    private string _text = @"";
+
+    private async Task speak()
+    {
+        var utterancet = new SpeechSynthesisUtterance { Text = _text, Lang = Japanese.CultureName, Pitch = 1.0, Rate = 1.0, Volume = 1.0 };
+        await SpeechSynthesis.SpeakAsync(utterancet);
+    }
+}
