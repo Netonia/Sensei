@@ -19,5 +19,11 @@ public class KanjiResult
     public string Kun { get; set; }
     public string On { get; set; }
     public string[] Meanings { get; set; }
-    //public IEnumerable<string> RadicalDecomposition { get; set; }
+    public string French
+    {
+        get
+        {
+            return string.Join(", ", Meanings);
+        }
+    }
 }
