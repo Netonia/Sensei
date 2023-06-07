@@ -1,0 +1,59 @@
+﻿@inject SpeechSynthesis SpeechSynthesis
+@*<form action="/translate" class="row row-cols-lg-auto m-1">*@
+<div class="row">
+    <div class="col-4">
+        <div class="input-group">
+            <input name="text" class="form-control" placeholder="Text" @bind="@Text" />
+            <button class="btn btn-primary btn-sm" @onclick="translate"><span class="oi oi-globe" aria-hidden="true" title="Translate"></span></button>
+            @*<button class="btn btn-primary btn-sm" type="submit" ><span class="oi oi-globe" aria-hidden="true" title="Translate"></span></button>*@
+        </div>
+    </div>
+    <div class="col-4">
+        <div class="input-group" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+            <input name="From" class="form-control" @bind="@From" placeholder="From" />
+            <button class="btn btn-info btn-sm" @onclick="swapTranslation"><span class="oi oi-transfer" aria-hidden="true" title="Swap"></span></button>
+            <input name="Into" class="form-control" @bind="@Into" placeholder="To" />
+        </div>
+    </div>
+    <div class="col-4">
+        <div class="input-group">
+            <input name="text" class="form-control" placeholder="Translation" @bind="@Translation" />
+            <button class="btn btn-primary btn-sm" @onclick="speak"><span class="oi oi-media-play" aria-hidden="true" title="Speak"></span></button>
+        </div>
+    </div>
+</div>
+@*</form>*@
+
+@code
+{
+    [Parameter]
+    public string From { get; set; }
+    [Parameter]
+    public string Into { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+    public string Translation { get; set; }
+
+    private async Task speak()
+    {
+        var utterancet = new SpeechSynthesisUtterance { Text = Translation, Lang = Japanese.CultureName, Pitch = 1.0, Rate = 1.0, Volume = 1.0 };
+        await SpeechSynthesis.SpeakAsync(utterancet);
+    }
+
+    private void swapTranslation()
+    {
+        var tempLang = Into;
+        Into = From;
+        From = tempLang;
+
+        var tempTranslation = Translation;
+        Translation = Text;
+        Text = tempTranslation;
+    }
+
+    private async void translate()
+    {
+        Translation = await Translator.TranslateAsync(Text, From, Into);
+        StateHasChanged();
+    }
+}

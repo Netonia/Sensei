@@ -1,0 +1,131 @@
+﻿@page "/translate"
+@using Sensei.Data
+@using Microsoft.AspNetCore.WebUtilities
+@using Toolbelt.Blazor.SpeechSynthesis
+@using WanaKanaNet;
+@inject NavigationManager NavManager
+@inject SpeechSynthesis SpeechSynthesis
+
+<PageTitle>Translate</PageTitle>
+
+<h1>Translate</h1>
+
+<div class="row">
+    <div class="col-lg-4">
+        <label>Text</label>
+        <textarea class="form-control" @bind="@Text"></textarea>
+    </div>
+    <div class="col-lg-1 text-center">
+        <div class="input-group mb-3">
+            <input class="form-control" @bind="@From" placeholder="From" />
+            <button class="btn btn-info btn-sm" @onclick="swapTranslation"><span class="oi oi-transfer" aria-hidden="true" title="Swap"></span></button>
+            <input class="form-control" @bind="@Into" placeholder="To" />
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="processTranslate"><span class="oi oi-globe" aria-hidden="true" title="Translate"></span></button>
+    </div>
+    <div class="col-lg-3">
+        <label>Translation</label>
+        <textarea class="form-control" @bind="@_translatedText"></textarea>
+    </div>
+    <div class="col-lg-1 text-center">
+        <div class="input-group mb-3">
+            @*<input class="form-control" @bind="@_speechLang" placeholder="Lang" />*@
+            <select class="form-select" @bind="_voiceLang">
+                <option>Voice</option>
+                <option value="ja-JP">ja</option>
+                <option value="fr-FR">fr</option>
+                <option value="en-US">en</option>
+            </select>
+            <button class="btn btn-primary btn-sm" @onclick="speak"><span class="oi oi-media-play" aria-hidden="true" title="Speak"></span></button>
+        </div>
+        @*<div class="input-group mb-3">
+             <input class="form-control" @bind="@_fromScript" placeholder="From" />
+            <button class="btn btn-info btn-sm" @onclick="swapTransliteration"><span class="oi oi-transfer" aria-hidden="true" title="Swap"></span></button>
+            <input class="form-control" @bind="@_toScript" placeholder="To" />
+        </div>*@
+        <button class="btn btn-primary btn-sm" @onclick="transliterate"><span class="oi oi-text" aria-hidden="true" title="Transliterate"></span></button>
+    </div>
+    <div class="col-lg-3">
+        <label>Transliteration</label>
+        <textarea class="form-control" @bind="@_transliteration"></textarea>
+    </div>
+</div>
+
+@code
+{
+    public string From { get; set; } = "fr";
+    public string Into { get; set; } = "ja";
+    public string Text { get; set; }
+
+    private string _translatedText = "";
+    private string _transliteration = "";
+    private string _fromScript = "Jpan";
+    private string _toScript = "Latn";
+    private string _speechLang = "";
+    private string _voiceLang = "ja-JP";
+
+    protected override void OnInitialized()
+    {
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("from", out var _from))
+        {
+            From = _from;
+        }
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("into", out var _into))
+        {
+            Into = _into;
+        }
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("text", out var _text))
+        {
+            Text = _text;
+        }
+        if (!string.IsNullOrEmpty(Text))
+        {
+            processTranslate();
+        }
+        _speechLang = Into;
+        //var voices = await this.SpeechSynthesis.GetVoicesAsync();
+        //var voice = voices.FirstOrDefault(v => v.Lang.Equals(_voice));
+        //_voiceLang = voice.Lang;
+    }
+
+    private void swapTranslation()
+    {
+        var tempLang = Into;
+        Into = From;
+        From = tempLang;
+
+        var tempTranslation = _translatedText;
+        _translatedText = Text;
+        Text = tempTranslation;
+    }
+
+    private void swapTransliteration()
+    {
+        var tempLang = _toScript;
+        _toScript = _fromScript;
+        _fromScript = tempLang;
+    }
+
+    private async void processTranslate()
+    {
+        _translatedText = await Translator.TranslateAsync(Text, From, Into);
+        StateHasChanged();
+    }
+
+    private async Task speak()
+    {
+        var voices = await this.SpeechSynthesis.GetVoicesAsync();
+        var voice = voices.FirstOrDefault(v => v.Lang.Equals(_voiceLang));
+        var utterancet = new SpeechSynthesisUtterance { Text = _translatedText, Lang = Into, Pitch = 1.0, Rate = 1.0, Volume = 1.0, Voice = voice }; // Lang = _speechLang
+        await SpeechSynthesis.SpeakAsync(utterancet);
+    }
+
+    private async void transliterate()
+    {
+        //var converter = new KawazuConverter();
+        _transliteration = WanaKana.ToRomaji(_translatedText); //await converter.Convert(_translatedText, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
+        //Task.Run(() => Translator.TransliterationAsync(_translatedText, _fromScript, _toScript)).GetAwaiter().GetResult();
+        StateHasChanged();
+    }
+}

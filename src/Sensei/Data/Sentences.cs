@@ -21,7 +21,6 @@ public static class Sentences
          new Sentence(nameof(Politeness), "Please", "お願いします"),
          new Sentence(nameof(Politeness), "Excuse me", "すみません"),
          new Sentence(nameof(Politeness), "Sorry", "ごめん なさい"),
-         new Sentence(nameof(Politeness), "Happy to meet you", "はじめまして"),
          new Sentence(nameof(Politeness), "How are you?", "元気ですか？"),
          new Sentence(nameof(Politeness), "Welcome", "いらっしゃいませ")
     };

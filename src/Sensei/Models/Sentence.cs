@@ -1,6 +1,4 @@
-﻿using WanaKanaNet;
-
-namespace Sensei.Models;
+﻿namespace Sensei.Models;
 
 public class Sentence
 {
