@@ -1,7 +1,6 @@
 ﻿@page "/verbs"
 @using Sensei.Components
 @using Doushi
-@*@using Kawazu*@
 
 <PageTitle>Verbs</PageTitle>
 
@@ -20,7 +19,7 @@
             <table class="table table-bordered table-striped">
                 <tbody>
                     <tr>
-                        <th>Form@*@_transliteration*@</th>
+                        <th>Form</th>
                         <th>Affirmative</th>
                         <th>Negative</th>
                     </tr>
@@ -290,9 +289,6 @@
 
     private async void Conjugate()
     {
-        //var converter = new KawazuConverter();
-        //_transliteration = await converter.Convert(_verb, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "(", ")");
-
         var conj = Conjugator.Conjugate(_verb, _pronounciation);
 
         if (conj != null)
