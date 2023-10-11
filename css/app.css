@@ -1,5 +1,3 @@
-@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
-
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -100,6 +98,10 @@ a, .btn-link {
         content: var(--blazor-load-percentage-text, "Loading");
     }
 
+code {
+    color: #c02d76;
+}
+
 .flip-card {
     background-color: transparent;
     width: 8vw;
@@ -109,12 +111,14 @@ a, .btn-link {
     margin-left: 4px;
     margin-right: 4px;
 }
+
 @media only screen and (max-width: 600px) {
     .flip-card {
         width: 16vw;
         height: 16vw;
     }
 }
+
 .flip-card-inner {
     position: relative;
     width: 100%;
