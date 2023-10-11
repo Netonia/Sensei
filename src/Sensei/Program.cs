@@ -1,4 +1,4 @@
-using Sensei;
+using Sensei.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Toolbelt.Blazor.Extensions.DependencyInjection;

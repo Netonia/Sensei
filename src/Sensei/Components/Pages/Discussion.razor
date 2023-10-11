@@ -1,0 +1,36 @@
+﻿@page "/discussion"
+@using Sensei.Components
+@using Sensei.Data
+@using Sensei.Models
+
+<PageTitle>Discussion</PageTitle>
+
+<h1>Discussion</h1>
+
+<div class="row">
+    <div class="col-12">
+        <RadzenDataGrid FilterMode="FilterMode.Simple" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" LogicalFilterOperator="LogicalFilterOperator.Or" AllowColumnPicking="true" AllowColumnReorder="true" AllowColumnResize="true" AllowPaging="true" AllowSorting="true" Data="@_sentences" TItem="Sentence" PageSize="100">
+            @* AllowFiltering="true"*@
+            <Columns>
+                <RadzenDataGridColumn TItem="Sentence" Property="Category" Title="Category" Visible="false" />
+                <RadzenDataGridColumn TItem="Sentence" Title="Japanese" Sortable="false" Filterable="true">
+                    <Template Context="data">
+                        <Speaker text="@data.Japanese"></Speaker>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Sentence" Property="Meaning" Title="Meaning" />
+                <RadzenDataGridColumn TItem="Sentence" Property="Romaji" Title="Romaji" Visible="false" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
+
+@code
+{
+    private List<Sentence> _sentences;
+
+    protected override void OnInitialized()
+    {
+        _sentences = Sentences.All();
+    }
+}
