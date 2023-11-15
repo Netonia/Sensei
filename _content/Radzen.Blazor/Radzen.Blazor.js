@@ -335,7 +335,7 @@ window.Radzen = {
       if (
         slider.canChange &&
         newValue >= min &&
-        newValue <= max 
+        newValue <= max
       ) {
         slider.invokeMethodAsync(
           'RadzenSlider.OnValueChange',
@@ -482,6 +482,50 @@ window.Radzen = {
     }
 
     return ul.nextSelectedIndex;
+    },
+  focusTableRow: function (gridId, isDown, startIndex) {
+    var grid = document.getElementById(gridId);
+    if (!grid) return;
+
+    var table = grid.querySelector('.rz-grid-table').getElementsByTagName("tbody")[0];
+
+    if (!table.rows || table.rows.length == 0) return;
+
+    if (startIndex == undefined || startIndex == null) {
+      startIndex = -1;
+    }
+
+    table.nextSelectedIndex = startIndex;
+    if (isDown) {
+        while (table.nextSelectedIndex < table.rows.length - 1) {
+            table.nextSelectedIndex++;
+            if (!table.rows[table.nextSelectedIndex].classList.contains('rz-state-disabled'))
+                break;
+        }
+    } else {
+        while (table.nextSelectedIndex > 0) {
+            table.nextSelectedIndex--;
+            if (!table.rows[table.nextSelectedIndex].classList.contains('rz-state-disabled'))
+                break;
+        }
+    }
+
+    var highlighted = table.querySelectorAll('.rz-state-highlight');
+    if (highlighted.length) {
+      for (var i = 0; i < highlighted.length; i++) {
+        highlighted[i].classList.remove('rz-state-highlight');
+      }
+    }
+
+    if (
+      table.nextSelectedIndex >= 0 &&
+      table.nextSelectedIndex <= table.rows.length - 1
+    ) {
+      table.rows[table.nextSelectedIndex].classList.add('rz-state-highlight');
+      table.parentNode.parentNode.scrollTop = table.rows[table.nextSelectedIndex].offsetTop - table.rows[table.nextSelectedIndex].offsetHeight;
+    }
+
+    return table.nextSelectedIndex;
   },
   uploadInputChange: function (e, url, auto, multiple, clear, parameterName) {
       if (auto) {
@@ -1059,8 +1103,8 @@ window.Radzen = {
         }
     }, 500);
 
+    document.removeEventListener('keydown', Radzen.closePopupOrDialog);
     if (options.closeDialogOnEsc) {
-        document.removeEventListener('keydown', Radzen.closePopupOrDialog);
         document.addEventListener('keydown', Radzen.closePopupOrDialog);
     }
   },
@@ -1474,8 +1518,21 @@ window.Radzen = {
       selection.addRange(range);
     }
   },
-  selectionAttributes: function (selector, attributes) {
+  selectionAttributes: function (selector, attributes, container) {
     var selection = getSelection();
+    var range = selection.rangeCount > 0 && selection.getRangeAt(0);
+    var parent = range && range.commonAncestorContainer;
+    var inside = false;
+    while (parent) {
+      if (parent == container) {
+        inside = true;
+        break;
+      }
+      parent = parent.parentNode;
+    }
+    if (!inside) {
+      return {};
+    }
     var target = selection.focusNode;
     var innerHTML;
     if (target) {
@@ -1487,7 +1544,7 @@ window.Radzen = {
           innerHTML = target.outerHTML;
         }
       }
-      if (target && !target.matches(selector)) {
+      if (target && target.matches && !target.matches(selector)) {
         target = target.closest(selector);
       }
     }

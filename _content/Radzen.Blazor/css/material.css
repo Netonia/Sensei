@@ -14202,6 +14202,7 @@ p-button[type] {
   --rz-button-active-gradient: none;
   --rz-button-active-background-size: auto;
   --rz-button-disabled-opacity: 0.2;
+  --rz-button-empty-opacity: 0.4;
 }
 
 .rz-paginator-element, .rz-button {
@@ -14246,6 +14247,10 @@ p-button[type] {
 }
 .rz-state-disabled.rz-paginator-element, .rz-button.rz-state-disabled {
   opacity: var(--rz-button-disabled-opacity);
+  cursor: initial;
+}
+.rz-state-empty.rz-paginator-element, .rz-button.rz-state-empty {
+  opacity: var(--rz-button-empty-opacity);
   cursor: initial;
 }
 .rz-paginator-element .rz-button-box, .rz-button .rz-button-box {
@@ -16132,6 +16137,7 @@ input::placeholder {
   --rz-menu-item-icon-hover-color: var(--rz-text-title-color);
   --rz-menu-item-offset: 1rem;
   --rz-menu-item-transition: none;
+  --rz-menu-item-disabled-opacity: 0.2;
   --rz-menu-top-item-padding: 0.5rem;
   --rz-menu-top-item-border-radius: 0;
   --rz-menu-top-item-color: var(--rz-text-contrast-color);
@@ -16299,6 +16305,12 @@ input::placeholder {
 .rz-navigation-item-link,
 .rz-navigation-item-text {
   transition: var(--rz-menu-item-transition);
+}
+
+li.rz-navigation-item.rz-state-disabled {
+  opacity: var(--rz-menu-item-disabled-opacity);
+  cursor: initial;
+  pointer-events: none;
 }
 
 .rz-menu-toggle-item {
@@ -18790,19 +18802,31 @@ ul.rz-profile-menu .rz-navigation-menu .rzi {
   inset: 0;
   transition: background-color var(--rz-transition), color var(--rz-transition);
 }
-.rz-selectable tbody tr.rz-data-row td.rz-frozen-cell:before,
-.rz-selectable tbody tr.rz-data-row .rz-cell-data.rz-frozen-cell:before {
+.rz-selectable tbody tr.rz-data-row td.rz-frozen-cell-left:before,
+.rz-selectable tbody tr.rz-data-row .rz-cell-data.rz-frozen-cell-left:before {
   z-index: -1;
 }
-.rz-selectable tbody tr.rz-data-row td.rz-frozen-cell:after,
-.rz-selectable tbody tr.rz-data-row .rz-cell-data.rz-frozen-cell:after {
+.rz-selectable tbody tr.rz-data-row td.rz-frozen-cell-left:after,
+.rz-selectable tbody tr.rz-data-row .rz-cell-data.rz-frozen-cell-left:after {
   z-index: -2;
   background-color: var(--rz-grid-frozen-cell-background-color);
+}
+.rz-selectable tbody tr.rz-data-row td.rz-frozen-cell-right:before,
+.rz-selectable tbody tr.rz-data-row .rz-cell-data.rz-frozen-cell-right:before {
+  z-index: -2;
+  background-color: var(--rz-grid-frozen-cell-background-color);
+}
+.rz-selectable tbody tr.rz-data-row td.rz-frozen-cell-right:after,
+.rz-selectable tbody tr.rz-data-row .rz-cell-data.rz-frozen-cell-right:after {
+  z-index: -1;
 }
 .rz-selectable tbody tr.rz-data-row.rz-state-highlight > td {
   background-color: var(--rz-grid-selected-background-color);
 }
-.rz-selectable tbody tr.rz-data-row.rz-state-highlight > td.rz-frozen-cell:before {
+.rz-selectable tbody tr.rz-data-row.rz-state-highlight > td.rz-frozen-cell-left:before {
+  background-color: var(--rz-grid-selected-background-color);
+}
+.rz-selectable tbody tr.rz-data-row.rz-state-highlight > td.rz-frozen-cell-right:after {
   background-color: var(--rz-grid-selected-background-color);
 }
 .rz-selectable tbody tr.rz-data-row.rz-state-highlight .rz-cell-data {
@@ -18818,7 +18842,10 @@ ul.rz-profile-menu .rz-navigation-menu .rzi {
 .rz-selectable tbody tr.rz-data-row:hover:not(.rz-state-highlight) > td {
   background-color: var(--rz-grid-hover-background-color);
 }
-.rz-selectable tbody tr.rz-data-row:hover:not(.rz-state-highlight) > td.rz-frozen-cell:before {
+.rz-selectable tbody tr.rz-data-row:hover:not(.rz-state-highlight) > td.rz-frozen-cell-left:before {
+  background-color: var(--rz-grid-hover-background-color);
+}
+.rz-selectable tbody tr.rz-data-row:hover:not(.rz-state-highlight) > td.rz-frozen-cell-right:after {
   background-color: var(--rz-grid-hover-background-color);
 }
 .rz-selectable tbody tr.rz-data-row:hover:not(.rz-state-highlight) .rz-cell-data {
@@ -19036,10 +19063,18 @@ ul.rz-profile-menu .rz-navigation-menu .rzi {
 .rz-grid-table-fixed .rz-frozen-cell {
   position: -webkit-sticky;
   position: sticky;
+}
+.rz-grid-table-fixed .rz-frozen-cell-left, .rz-grid-table-fixed .rz-frozen-cell-right {
   background: var(--rz-grid-frozen-cell-background-color);
-  border-right: var(--rz-grid-frozen-cell-border) !important;
-  box-shadow: 1px 0 2px 0 rgba(0, 0, 0, 0.12);
   z-index: 1;
+}
+.rz-grid-table-fixed .rz-frozen-cell-left.rz-frozen-cell-left-end {
+  box-shadow: 5px 0 5px -5px rgba(0, 0, 0, 0.12);
+  border-right: var(--rz-grid-frozen-cell-border) !important;
+}
+.rz-grid-table-fixed .rz-frozen-cell-right.rz-frozen-cell-right-end {
+  box-shadow: -5px 0 5px -5px rgba(0, 0, 0, 0.12);
+  border-left: var(--rz-grid-frozen-cell-border) !important;
 }
 
 .rz-grid-table tfoot, .rz-grid-table tfoot td {
