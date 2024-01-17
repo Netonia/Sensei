@@ -483,7 +483,7 @@ window.Radzen = {
 
     return ul.nextSelectedIndex;
     },
-  focusTableRow: function (gridId, isDown, startIndex) {
+  focusTableRow: function (gridId, isDown, startIndex, multiple) {
     var grid = document.getElementById(gridId);
     if (!grid) return;
 
@@ -510,18 +510,23 @@ window.Radzen = {
         }
     }
 
-    var highlighted = table.querySelectorAll('.rz-state-highlight');
-    if (highlighted.length) {
-      for (var i = 0; i < highlighted.length; i++) {
-        highlighted[i].classList.remove('rz-state-highlight');
-      }
+    if (!multiple) {
+        var highlighted = table.querySelectorAll('.rz-state-highlight');
+        if (highlighted.length) {
+            for (var i = 0; i < highlighted.length; i++) {
+                highlighted[i].classList.remove('rz-state-highlight');
+            }
+        }
     }
 
     if (
       table.nextSelectedIndex >= 0 &&
       table.nextSelectedIndex <= table.rows.length - 1
     ) {
-      table.rows[table.nextSelectedIndex].classList.add('rz-state-highlight');
+      if (!table.rows[table.nextSelectedIndex].classList.contains('rz-state-highlight')) {
+        table.rows[table.nextSelectedIndex].classList.add('rz-state-highlight');
+      }
+     
       table.parentNode.parentNode.scrollTop = table.rows[table.nextSelectedIndex].offsetTop - table.rows[table.nextSelectedIndex].offsetHeight;
     }
 
@@ -610,6 +615,7 @@ window.Radzen = {
       files.push({Name: file.name, Size: file.size});
     }
     var xhr = new XMLHttpRequest();
+    xhr.withCredentials = true;
     xhr.upload.onprogress = function (e) {
       if (e.lengthComputable) {
         var uploadComponent =
@@ -885,16 +891,18 @@ window.Radzen = {
     }
 
     Radzen[id] = function (e) {
+        var lastPopup = Radzen.popups && Radzen.popups[Radzen.popups.length - 1];
+        var currentPopup = lastPopup != null && document.getElementById(lastPopup.id) || popup;
+        currentPopup.instance = lastPopup.instance;
+        currentPopup.callback = lastPopup.callback;
+
         if(e.type == 'contextmenu' || !e.target || !closeOnDocumentClick) return;
         if (!/Android/i.test(navigator.userAgent) &&
             !['input', 'textarea'].includes(document.activeElement ? document.activeElement.tagName.toLowerCase() : '') && e.type == 'resize') {
-            Radzen.closePopup(id, instance, callback, e);
+            Radzen.closePopup(currentPopup.id, currentPopup.instance, currentPopup.callback, e);
             return;
         }
-        var closestPopup = e.target.closest && (e.target.closest('.rz-popup') || e.target.closest('.rz-overlaypanel'));
-        if (closestPopup && closestPopup != popup) {
-          return;
-        }
+
         var closestLink = e.target.closest && (e.target.closest('.rz-link') || e.target.closest('.rz-navigation-item-link'));
         if (closestLink && closestLink.closest && closestLink.closest('a')) {
             if (Radzen.closeAllPopups) {
@@ -902,12 +910,12 @@ window.Radzen = {
             }
         }
         if (parent) {
-          if (e.type == 'mousedown' && !parent.contains(e.target) && !popup.contains(e.target)) {
-            Radzen.closePopup(id, instance, callback, e);
+          if (e.type == 'mousedown' && !parent.contains(e.target) && !currentPopup.contains(e.target)) {
+              Radzen.closePopup(currentPopup.id, currentPopup.instance, currentPopup.callback, e);
           }
         } else {
-          if (!popup.contains(e.target)) {
-            Radzen.closePopup(id, instance, callback, e);
+          if (!currentPopup.contains(e.target)) {
+              Radzen.closePopup(currentPopup.id, currentPopup.instance, currentPopup.callback, e);
           }
         }
     };
@@ -990,6 +998,9 @@ window.Radzen = {
     if (instance) {
       instance.invokeMethodAsync(callback);
     }
+    Radzen.popups = (Radzen.popups || []).filter(function (obj) {
+        return obj.id !== id;
+    });
 
     if (Radzen.activeElement && Radzen.activeElement == document.activeElement ||
         Radzen.activeElement && document.activeElement == document.body ||
@@ -1063,23 +1074,25 @@ window.Radzen = {
             lastDialog.removeEventListener('keydown', Radzen.focusTrapDialog);
             lastDialog.addEventListener('keydown', Radzen.focusTrapDialog);
 
-            dialog.offsetWidth = lastDialog.parentElement.offsetWidth;
-            dialog.offsetHeight = lastDialog.parentElement.offsetHeight;
-            var dialogResize = function (e) {
-                if(!dialog) return;
-                if (dialog.offsetWidth != e[0].target.offsetWidth || dialog.offsetHeight != e[0].target.offsetHeight) {
+            if (options.resizable) {
+                dialog.offsetWidth = lastDialog.parentElement.offsetWidth;
+                dialog.offsetHeight = lastDialog.parentElement.offsetHeight;
+                var dialogResize = function (e) {
+                    if (!dialog) return;
+                    if (dialog.offsetWidth != e[0].target.offsetWidth || dialog.offsetHeight != e[0].target.offsetHeight) {
 
-                    dialog.offsetWidth = e[0].target.offsetWidth;
-                    dialog.offsetHeight = e[0].target.offsetHeight;
+                        dialog.offsetWidth = e[0].target.offsetWidth;
+                        dialog.offsetHeight = e[0].target.offsetHeight;
 
-                    dialog.invokeMethodAsync(
-                        'RadzenDialog.OnResize',
-                        e[0].target.offsetWidth,
-                        e[0].target.offsetHeight
-                    );
-                }
-            };
-            Radzen.dialogResizer = new ResizeObserver(dialogResize).observe(lastDialog.parentElement);
+                        dialog.invokeMethodAsync(
+                            'RadzenDialog.OnResize',
+                            e[0].target.offsetWidth,
+                            e[0].target.offsetHeight
+                        );
+                    }
+                };
+                Radzen.dialogResizer = new ResizeObserver(dialogResize).observe(lastDialog.parentElement);
+            }
 
             if (options.autoFocusFirstElement) {
                 if (lastDialog.querySelectorAll('.rz-html-editor-content').length) {
@@ -1399,7 +1412,7 @@ window.Radzen = {
   },
   queryCommands: function (ref) {
     return {
-      html: ref.innerHTML,
+      html: ref != null ? ref.innerHTML : null,
       fontName: document.queryCommandValue('fontName'),
       fontSize: document.queryCommandValue('fontSize'),
       formatBlock: document.queryCommandValue('formatBlock'),
@@ -1563,6 +1576,9 @@ window.Radzen = {
     }
   },
   startDrag: function (ref, instance, handler) {
+    if (!ref) {
+        return { left: 0, top: 0, width: 0, height: 0 };
+    }
     ref.mouseMoveHandler = function (e) {
       instance.invokeMethodAsync(handler, { clientX: e.clientX, clientY: e.clientY });
     };
@@ -1611,12 +1627,21 @@ window.Radzen = {
       visual.id = id + 'visual';
       document.body.appendChild(visual);
 
+      var resizers = cell.parentNode.querySelectorAll('.rz-column-resizer');
+      for (let i = 0; i < resizers.length; i++) {
+          resizers[i].style.display = 'none';
+      }
+
       Radzen[id + 'end'] = function (e) {
           var el = document.getElementById(id + 'visual');
           if (el) {
               document.body.removeChild(el);
               Radzen[id + 'end'] = null;
               Radzen[id + 'move'] = null;
+              var resizers = cell.parentNode.querySelectorAll('.rz-column-resizer');
+              for (let i = 0; i < resizers.length; i++) {
+                  resizers[i].style.display = 'block';
+              }
           }
       }
       document.removeEventListener('click', Radzen[id + 'end']);
