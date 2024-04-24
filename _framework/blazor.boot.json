@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "Sensei",
   "resources": {
-    "hash": "sha256-gJci+Vewa8mEV93W+gUDlW/esu8NiyybzxWAP8JHR+0=",
+    "hash": "sha256-NZMQkHTjTUUec1/4T+/T6Gr0uyVJxxze/Vwf7GpUb2Q=",
     "jsModuleNative": {
       "dotnet.native.8.0.4.6vlmefabfv.js": "sha256-ju0+XWE0ihz554eKEj0HQ8Opa61xpbUIaX5/MNo8we4="
     },
@@ -38,8 +38,8 @@
       "Microsoft.JSInterop.WebAssembly.wasm": "sha256-i8yLC1pzEZMAPAHK2MyunJW81S6Tpyvwka9LDZSylx8=",
       "MyNihongo.KanaConverter.wasm": "sha256-7TETguyoqvhcU4tiphqZ1zC/aHSd/Rt062OokcteQr4=",
       "netstandard.wasm": "sha256-Y4ajdqb6hc0PO6KHdToWo7zJNKH+uDxuYl88weJzTTw=",
-      "Radzen.Blazor.wasm": "sha256-Q8jO5mAIjgXM1wT4tX7sK1H7l1V9OJzc5KC3U4+FQAo=",
-      "Sensei.wasm": "sha256-hFP0JIjH4pwKty9jq5YKqjEH4NCf/kNgtE5eGD165O8=",
+      "Radzen.Blazor.wasm": "sha256-zYAffF3axMLixyHW7cyR6GM+cgR+t2ImZPvXA7EnFgI=",
+      "Sensei.wasm": "sha256-x24lhUBv+6ctf8JHxu3safgJvWjgp5G8LYdc2lDyYYc=",
       "System.Collections.Concurrent.wasm": "sha256-ZT3N8HY37nPI04768PQC5oT0ifJGnbq7ni9ol89E9UE=",
       "System.Collections.Immutable.wasm": "sha256-daU1HLM33wpHn+coqdWnUc2hmFJa9EcgVm1CcobNndo=",
       "System.Collections.NonGeneric.wasm": "sha256-avs19p+ycIRhuxZ6kQrFpHkzww/KSV53abLd44VHDG4=",
