@@ -10181,6 +10181,19 @@ p-button[type] {
   --rz-chip-font-size: 0.875rem;
 }
 
+.rz-dropzone {
+  user-select: none;
+}
+
+.rz-dropzone-item {
+  user-select: none;
+  cursor: grab;
+}
+
+.rz-dragging {
+  cursor: grabbing;
+}
+
 :root {
   --rz-input-font-size: var(--rz-body-font-size);
   --rz-input-height: 2.25rem;

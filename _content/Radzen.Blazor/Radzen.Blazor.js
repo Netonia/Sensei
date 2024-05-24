@@ -318,6 +318,7 @@ window.Radzen = {
     if (Radzen[id].keyPress && Radzen[id].paste) {
         for (var i = 0; i < inputs.length; i++) {
             inputs[i].removeEventListener('keypress', Radzen[id].keyPress);
+            inputs[i].removeEventListener('keydown', Radzen[id].keyDown);
             inputs[i].removeEventListener('paste', Radzen[id].paste);
         }
         delete Radzen[id].keyPress;
@@ -358,18 +359,19 @@ window.Radzen = {
           }
       }
       Radzen[id].keyPress = function (e) {
-          var ch = String.fromCharCode(e.charCode);
+          var keyCode = e.data ? e.data.charCodeAt(0) : e.which;
+          var ch = e.data || String.fromCharCode(e.which);
 
           if (e.metaKey ||
               e.ctrlKey ||
-              e.keyCode == 9 ||
-              e.keyCode == 8 ||
-              e.keyCode == 13
+              keyCode == 9 ||
+              keyCode == 8 ||
+              keyCode == 13
           ) {
               return;
           }
 
-          if (isNumber && (e.which < 48 || e.which > 57)) {
+          if (isNumber && (keyCode < 48 || keyCode > 57)) {
               e.preventDefault();
               return;
           }
@@ -391,8 +393,26 @@ window.Radzen = {
           }
       }
 
+      Radzen[id].keyDown = function (e) {
+          var keyCode = e.data ? e.data.charCodeAt(0) : e.which;
+          if (keyCode == 8) {
+              e.currentTarget.value = '';
+
+              var value = inputs.map(i => i.value).join('').trim();
+              hidden.value = value;
+
+              ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value);
+
+              var index = inputs.indexOf(e.currentTarget);
+              if (index > 0) {
+                  inputs[index - 1].focus();
+              }
+          }
+      }
+
       for (var i = 0; i < inputs.length; i++) {
-          inputs[i].addEventListener('keypress', Radzen[id].keyPress);
+          inputs[i].addEventListener(navigator.userAgent.match(/Android/i) ? 'textInput' : 'keypress', Radzen[id].keyPress);
+          inputs[i].addEventListener(navigator.userAgent.match(/Android/i) ? 'textInput' : 'keydown', Radzen[id].keyDown);
           inputs[i].addEventListener('paste', Radzen[id].paste);
       }
   },
@@ -502,6 +522,12 @@ window.Radzen = {
     }
 
     Radzen[id] = null;
+  },
+  prepareDrag: function (el) {
+    if (el) {
+        el.ondragover = function (e) { e.preventDefault(); };
+        el.ondragstart = function (e) { e.dataTransfer.setData('', e.target.id); };
+    }
   },
   focusElement: function (elementId) {
     var el = document.getElementById(elementId);
@@ -960,6 +986,7 @@ window.Radzen = {
       }
   },
   createDatePicker(el, popupId) {
+      if(!el) return;
       var handler = function (e, condition) {
           if (condition) {
               Radzen.togglePopup(e.currentTarget.parentNode, popupId, false, null, null, true, false);
@@ -2105,10 +2132,10 @@ window.Radzen = {
                         paneNext ? parseInt(paneNext.getAttribute('data-index')) : null,
                         paneNext ? parseFloat(paneNext.style.flexBasis) : null
                     );
-                    document.removeEventListener('mousemove', Radzen[el].mouseMoveHandler);
-                    document.removeEventListener('mouseup', Radzen[el].mouseUpHandler);
-                    document.removeEventListener('touchmove', Radzen[el].touchMoveHandler);
-                    document.removeEventListener('touchend', Radzen[el].mouseUpHandler);
+
+                    document.removeEventListener('pointerup', Radzen[el].mouseUpHandler);
+                    document.removeEventListener('pointermove', Radzen[el].mouseMoveHandler);
+                    el.removeEventListener('touchmove', preventDefaultAndStopPropagation);
                     Radzen[el] = null;
                 }
             },
@@ -2160,11 +2187,15 @@ window.Radzen = {
                     Radzen[el].mouseMoveHandler(e.targetTouches[0]);
                 }
             }
+          };
+
+        const preventDefaultAndStopPropagation = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
         };
-        document.addEventListener('mousemove', Radzen[el].mouseMoveHandler);
-        document.addEventListener('mouseup', Radzen[el].mouseUpHandler);
-        document.addEventListener('touchmove', Radzen[el].touchMoveHandler, { passive: true });
-        document.addEventListener('touchend', Radzen[el].mouseUpHandler, { passive: true });
+          document.addEventListener('pointerup', Radzen[el].mouseUpHandler);
+          document.addEventListener('pointermove', Radzen[el].mouseMoveHandler);
+          el.addEventListener('touchmove', preventDefaultAndStopPropagation, { passive: false });
     },
     resizeSplitter(id, e) {
         var el = document.getElementById(id);
