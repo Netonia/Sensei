@@ -21,6 +21,9 @@ var rejectCallbacks = [];
 var radzenRecognition;
 
 window.Radzen = {
+    isRTL: function (el) {
+        return el && getComputedStyle(el).direction == 'rtl';
+    },
     throttle: function (callback, delay) {
         var timeout = null;
         return function () {
@@ -45,7 +48,7 @@ window.Radzen = {
               for (var i = 0; i < mask.length; i++) {
                   const c = mask[i];
                   if (chars && chars[count]) {
-                      if (/\*/.test(c)) {
+                      if (c === '*' || c == chars[count]) {
                           formatted += chars[count];
                           count++;
                       } else {
@@ -55,7 +58,14 @@ window.Radzen = {
               }
               return formatted;
           }
+
+          var start = el.selectionStart != el.value.length ? el.selectionStart : -1;
+          var end = el.selectionEnd != el.value.length ? el.selectionEnd : -1;
+
           el.value = format(el.value, mask, pattern, characterPattern);
+
+          el.selectionStart = start != -1 ? start : el.selectionStart;
+          el.selectionEnd = end != -1 ? end : el.selectionEnd;
       }
   },
   addContextMenu: function (id, ref) {
@@ -189,7 +199,7 @@ window.Radzen = {
     script.src =
       'https://maps.googleapis.com/maps/api/js?' +
       (apiKey ? 'key=' + apiKey + '&' : '') +
-      'callback=rz_map_init';
+      'callback=rz_map_init&libraries=marker';
 
     script.async = true;
     script.defer = true;
@@ -201,7 +211,7 @@ window.Radzen = {
 
     document.body.appendChild(script);
   },
-  createMap: function (wrapper, ref, id, apiKey, zoom, center, markers, options, fitBoundsToMarkersOnUpdate) {
+  createMap: function (wrapper, ref, id, apiKey, mapId, zoom, center, markers, options, fitBoundsToMarkersOnUpdate) {
     var api = function () {
       var defaultView = document.defaultView;
 
@@ -220,7 +230,8 @@ window.Radzen = {
 
       Radzen[id].instance = new google.maps.Map(wrapper, {
         center: center,
-        zoom: zoom
+        zoom: zoom,
+        mapId: mapId
       });
 
       Radzen[id].instance.addListener('click', function (e) {
@@ -258,16 +269,23 @@ window.Radzen = {
                 Radzen[id].instance.markers = [];
 
                 markers.forEach(function (m) {
-                    var marker = new this.google.maps.Marker({
+                    var content;
+
+                    if (m.label) {
+                        content = document.createElement('span');
+                        content.innerHTML = m.label;
+                    }
+
+                    var marker = new this.google.maps.marker.AdvancedMarkerElement({
                         position: m.position,
                         title: m.title,
-                        label: m.label
+                        content: content
                     });
 
                     marker.addListener('click', function (e) {
                         Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnMarkerClick', {
                             Title: marker.title,
-                            Label: marker.label,
+                            Label: marker.content.innerText,
                             Position: marker.position
                         });
                     });
@@ -437,7 +455,8 @@ window.Radzen = {
         e.targetTouches && e.targetTouches[0]
           ? e.targetTouches[0].pageX - e.target.getBoundingClientRect().left
           : e.pageX - handle.getBoundingClientRect().left;
-      var percent = (handle.offsetLeft + offsetX) / parent.offsetWidth;
+      var percent = (Radzen.isRTL(handle) ? parent.offsetWidth - handle.offsetLeft - offsetX
+            : handle.offsetLeft + offsetX) / parent.offsetWidth;
 
       if (percent > 1) {
           percent = 1;
@@ -1002,7 +1021,7 @@ window.Radzen = {
       var input = el.querySelector('.rz-inputtext');
       if (input) {
           input.onclick = function (e) {
-              handler(e, e.currentTarget.classList.contains('rz-readonly'));
+              handler(e, e.currentTarget.classList.contains('rz-readonly') || e.currentTarget.classList.contains('rz-input-trigger') );
           };
       }
   },
@@ -1030,13 +1049,13 @@ window.Radzen = {
 
       var top = parentRect.bottom + scrollTop;
 
-      if (top + rect.height > window.innerHeight && parentRect.top > rect.height) {
+      if (top + rect.height > window.innerHeight + scrollTop && parentRect.top > rect.height) {
           top = parentRect.top - rect.height + scrollTop;
       }
 
       popup.style.top = top + 'px';
   },
-  openPopup: function (parent, id, syncWidth, position, x, y, instance, callback, closeOnDocumentClick = true, autoFocusFirstElement = false) {
+  openPopup: function (parent, id, syncWidth, position, x, y, instance, callback, closeOnDocumentClick = true, autoFocusFirstElement = false, disableSmartPosition = false) {
     var popup = document.getElementById(id);
     if (!popup) return;
 
@@ -1078,7 +1097,9 @@ window.Radzen = {
     var smartPosition = !position || position == 'bottom';
 
     if (smartPosition && top + rect.height > window.innerHeight && parentRect.top > rect.height) {
-      top = parentRect.top - rect.height;
+        if (disableSmartPosition !== true) {
+            top = parentRect.top - rect.height;
+        }
 
       if (position) {
         top = top - 40;
@@ -1322,6 +1343,37 @@ window.Radzen = {
         }
     }
   },
+  focusFirstFocusableElement: function (el) {
+      var focusable = Radzen.getFocusableElements(el);
+      var editor = el.querySelector('.rz-html-editor');
+
+      if (editor && !focusable.includes(editor.previousElementSibling)) {
+          var editable = el.querySelector('.rz-html-editor-content');
+          if (editable) {
+              var selection = window.getSelection();
+              var range = document.createRange();
+              range.setStart(editable, 0);
+              range.setEnd(editable, 0);
+              selection.removeAllRanges();
+              selection.addRange(range);
+          }
+      } else {
+          var firstFocusable = focusable[0];
+          if (firstFocusable) {
+              firstFocusable.focus();
+          }
+      }
+  },
+  openSideDialog: function (options) {
+      setTimeout(function () {
+          if (options.autoFocusFirstElement) {
+              var dialogs = document.querySelectorAll('.rz-dialog-side-content');
+              if (dialogs.length == 0) return;
+              var lastDialog = dialogs[dialogs.length - 1];
+              Radzen.focusFirstFocusableElement(lastDialog);
+          }
+      }, 500);
+  },
   openDialog: function (options, dialogService, dialog) {
     if (Radzen.closeAllPopups) {
         Radzen.closeAllPopups();
@@ -1363,24 +1415,39 @@ window.Radzen = {
                 Radzen.dialogResizer = new ResizeObserver(dialogResize).observe(lastDialog.parentElement);
             }
 
-            if (options.autoFocusFirstElement) {
-                if (lastDialog.querySelectorAll('.rz-html-editor-content').length) {
-                    var editable = lastDialog.querySelector('.rz-html-editor-content');
-                    if (editable) {
-                        var selection = window.getSelection();
-                        var range = document.createRange();
-                        range.setStart(editable, 0);
-                        range.setEnd(editable, 0);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                    }
-                } else {
-                    var focusable = Radzen.getFocusableElements(lastDialog);
-                    var firstFocusable = focusable[0];
-                    if (firstFocusable) {
-                        firstFocusable.focus();
-                    }
+            if (options.draggable) {
+                var dialogTitle = lastDialog.parentElement.querySelector('.rz-dialog-titlebar');
+                if (dialogTitle) {
+                    Radzen[dialogTitle] = function (e) {
+                        var rect = lastDialog.parentElement.getBoundingClientRect();
+                        var offsetX = e.clientX - rect.left;
+                        var offsetY = e.clientY - rect.top;
+
+                        var move = function (e) {
+                            var left = e.clientX - offsetX;
+                            var top = e.clientY - offsetY;
+
+                            lastDialog.parentElement.style.left = left + 'px';
+                            lastDialog.parentElement.style.top = top + 'px';
+
+                            dialog.invokeMethodAsync('RadzenDialog.OnDrag', top, left);
+                        };
+
+                        var stop = function () {
+                            document.removeEventListener('mousemove', move);
+                            document.removeEventListener('mouseup', stop);
+                        };
+
+                        document.addEventListener('mousemove', move);
+                        document.addEventListener('mouseup', stop);
+                    };
+
+                    dialogTitle.addEventListener('mousedown', Radzen[dialogTitle]);
                 }
+            }
+
+            if (options.autoFocusFirstElement) {
+                Radzen.focusFirstFocusableElement(lastDialog);
             }
         }
     }, 500);
@@ -1394,6 +1461,17 @@ window.Radzen = {
     Radzen.dialogResizer = null;
     document.body.classList.remove('no-scroll');
     var dialogs = document.querySelectorAll('.rz-dialog-content');
+
+    var lastDialog = dialogs.length && dialogs[dialogs.length - 1];
+    if (lastDialog) {
+        var dialogTitle = lastDialog.parentElement.querySelector('.rz-dialog-titlebar');
+        if (dialogTitle) {
+            dialogTitle.removeEventListener('mousedown', Radzen[dialogTitle]);
+            Radzen[dialogTitle] = null;
+            delete Radzen[dialogTitle];
+        }
+    }
+
     if (dialogs.length <= 1) {
         document.removeEventListener('keydown', Radzen.closePopupOrDialog);
         delete Radzen.dialogService;
@@ -1420,12 +1498,12 @@ window.Radzen = {
         var firstFocusable = focusable[0];
         var lastFocusable = focusable[focusable.length - 1];
 
-        if (firstFocusable && e.shiftKey && document.activeElement === firstFocusable) {
-            e.preventDefault();
-            firstFocusable.focus();
-        } else if (lastFocusable && !e.shiftKey && document.activeElement === lastFocusable) {
+        if (firstFocusable && lastFocusable && e.shiftKey && document.activeElement === firstFocusable) {
             e.preventDefault();
             lastFocusable.focus();
+        } else if (firstFocusable && lastFocusable && !e.shiftKey && document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
         }
     }
   },
@@ -1533,7 +1611,7 @@ window.Radzen = {
 
     return readAsDataURL(fileInput);
   },
-  toggleMenuItem: function (target, event, defaultActive) {
+  toggleMenuItem: function (target, event, defaultActive, clickToOpen) {
     var item = target.closest('.rz-navigation-item');
 
     var active = defaultActive != undefined ? defaultActive : !item.classList.contains('rz-navigation-item-active');
@@ -1556,6 +1634,10 @@ window.Radzen = {
         icon.style.transform = 'rotate(' + deg + ')';
       }
     }
+
+    if (clickToOpen === false && item.parentElement && item.parentElement.closest('.rz-navigation-item') && !defaultActive) {
+        return;
+    };
 
     toggle(active);
 
@@ -1779,7 +1861,15 @@ window.Radzen = {
                     var status = xhr.status;
                     if (status === 0 || (status >= 200 && status < 400)) {
                         var result = JSON.parse(xhr.responseText);
-                        document.execCommand("insertHTML", false, '<img src="' + result.url + '">');
+                        var html = '<img src="' + result.url + '">';
+                        if (paste) {
+                            instance.invokeMethodAsync('OnPaste', html)
+                                .then(function (html) {
+                                    document.execCommand("insertHTML", false, html);
+                                });
+                        } else {
+                          document.execCommand("insertHTML", false, '<img src="' + result.url + '">');
+                        }
                     } else {
                         instance.invokeMethodAsync('OnError', xhr.responseText);
                     }
@@ -1795,7 +1885,16 @@ window.Radzen = {
         } else {
             var reader = new FileReader();
             reader.onload = function (e) {
-                document.execCommand("insertHTML", false, '<img src="' + e.target.result + '">');
+              var html = '<img src="' + e.target.result + '">';
+
+              if (paste) {
+                instance.invokeMethodAsync('OnPaste', html)
+                  .then(function (html) {
+                    document.execCommand("insertHTML", false, html);
+                  });
+              } else {
+                document.execCommand("insertHTML", false, html);
+              }
             };
             reader.readAsDataURL(file);
         }
@@ -1868,7 +1967,7 @@ window.Radzen = {
     }
     return attributes.reduce(function (result, name) {
       if (target) {
-        result[name] = target[name];
+        result[name] = target[name].toString();
       }
       return result;
     }, { innerText: selection.toString(), innerHTML: innerHTML });
@@ -2019,7 +2118,7 @@ window.Radzen = {
           },
           mouseMoveHandler: function (e) {
               if (Radzen[el]) {
-                  var widthFloat = (Radzen[el].width - (Radzen[el].clientX - e.clientX));
+                  var widthFloat = (Radzen[el].width - (Radzen.isRTL(cell) ? -1 : 1) * (Radzen[el].clientX - e.clientX));
                   var minWidth = parseFloat(cell.style.minWidth || 0)
 
                   if (widthFloat < minWidth) {
@@ -2150,7 +2249,7 @@ window.Radzen = {
                     var spaceLength = Radzen[el].paneLength + Radzen[el].paneNextLength;
 
                     var length = (Radzen[el].paneLength -
-                        (Radzen[el].clientPos - (isHOrientation ? e.clientX : e.clientY)));
+                        (isHOrientation && Radzen.isRTL(e.target) ? -1 : 1) * (Radzen[el].clientPos - (isHOrientation ? e.clientX : e.clientY)));
 
                     if (length > spaceLength)
                         length = spaceLength;
