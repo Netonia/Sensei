@@ -1,0 +1,18 @@
+﻿@page "/kanarandom"
+@using Sensei.Components
+@using Sensei.Data
+
+<KanaDetails Syllab="@Syllab"></KanaDetails>
+
+@code
+{
+    public string Syllab { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Set Syllab to a random kana
+        var random = new Random();
+        var index = random.Next(0, Syllables.Gojuon.Count());
+        Syllab = Syllables.Gojuon[index];
+    }
+}
