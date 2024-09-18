@@ -12,7 +12,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.8" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.8" PrivateAssets="all" />
 		<PackageReference Include="MyNihongo.KanaConverter" Version="1.0.2" />
-		<PackageReference Include="Radzen.Blazor" Version="5.1.1" />
+		<PackageReference Include="Radzen.Blazor" Version="5.2.0" />
 		<PackageReference Include="Toolbelt.Blazor.SpeechSynthesis" Version="10.3.1" />
 		<PackageReference Include="WanaKana-net" Version="1.0.0" />
 		<PackageReference Include="WanaKanaSharp" Version="0.2.0" />
