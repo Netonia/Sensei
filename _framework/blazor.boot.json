@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "Sensei",
   "resources": {
-    "hash": "sha256-yuyVRjqJFW4jsLj0M1oReP+SyxeP+iELKEqyFWxUbuA=",
+    "hash": "sha256-tFsu6Y4yqTkpO8CtuHS/DFjqJuWqbCV8c2F8efD+7rw=",
     "jsModuleNative": {
       "dotnet.native.8.0.8.746giovk6l.js": "sha256-juC5sA7gHTLXFEhAKgdM2/RavswpwCtDfjYGsAz2FXg="
     },
@@ -23,7 +23,7 @@
       "Microsoft.AspNetCore.Components.wasm": "sha256-W/B8lwhKj794HTNdEFl7i/cDyYbgg7c2tbVG9KKx/0g=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-/eNsbxviq+vNXtvbr7WkJRdLSRBI3rVAJemrHbelnxc=",
       "Microsoft.AspNetCore.Components.WebAssembly.wasm": "sha256-QHKZPipyuyQm0KTgEbRfKP8GmsOlAHZLH3oiS6hiafw=",
-      "Microsoft.CSharp.wasm": "sha256-gSA4InqSF2grGH+LXTrE+NEe02k7ZPtx4uOiXyIsQhg=",
+      "Microsoft.CSharp.wasm": "sha256-rCqpfor8BJ9nwNkBssl8SeULIQ6MTiY6I7LKUb0MtoE=",
       "Microsoft.Extensions.Configuration.Abstractions.wasm": "sha256-87sn2TYqgdZ95sXmavjKEzoEfMgHnYQ9LOvnMX+aZcI=",
       "Microsoft.Extensions.Configuration.Json.wasm": "sha256-Sxmy2ZS134URxbHEvdbS6NcQ3zXS7UWx/5ZPpwiW7FA=",
       "Microsoft.Extensions.Configuration.wasm": "sha256-jYqHUZ07UYWc8POk7xhas6xQYH7t1qoTcylqoDqncJk=",
@@ -38,8 +38,8 @@
       "Microsoft.JSInterop.WebAssembly.wasm": "sha256-sLSiCKh0RQEV/2cl05tr7wOLWzExQfPZovvpqYLJduQ=",
       "MyNihongo.KanaConverter.wasm": "sha256-7TETguyoqvhcU4tiphqZ1zC/aHSd/Rt062OokcteQr4=",
       "netstandard.wasm": "sha256-aXDZy7bVqhwcxRzlY/TK5AyzVsCFYzhTA0pyTeu/T6s=",
-      "Radzen.Blazor.wasm": "sha256-/zvqcDUfEULQjWDwPJDFYECUaYvlpcoALNxpPJMqicI=",
-      "Sensei.wasm": "sha256-LTx1TYqJJrF5ISAWM318PEBdWHOXCzEkLwJDKY4Ol2U=",
+      "Radzen.Blazor.wasm": "sha256-Krs3QG/ab+Y77mzFrnLOEaff7GRyvh7Bhct+bJJC3k4=",
+      "Sensei.wasm": "sha256-PsDDVJOg3DT+nV6rThvzeX3smfhJzHU4G6xOeCmv0jw=",
       "System.Collections.Concurrent.wasm": "sha256-x9rqCGJonIhl6TSJR6RInnli48WQKmLMCM2C8XgXj60=",
       "System.Collections.Immutable.wasm": "sha256-D7+f8VLJfAKTI/JKVol6sWymap7WSyNFZ9QGyIAuYdw=",
       "System.Collections.NonGeneric.wasm": "sha256-5jkL6rWoWyTc7hm5nVyNYif5p8L9iqvJ4EV0Iw4AOiE=",

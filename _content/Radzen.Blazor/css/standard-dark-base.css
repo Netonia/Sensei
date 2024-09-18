@@ -442,6 +442,174 @@
   align-items: flex-end !important;
 }
 
+.rz-overflow-auto {
+  overflow: auto !important;
+}
+
+.rz-overflow-scroll {
+  overflow: scroll !important;
+}
+
+.rz-overflow-visible {
+  overflow: visible !important;
+}
+
+.rz-overflow-hidden {
+  overflow: hidden !important;
+}
+
+.rz-w-25 {
+  width: 25% !important;
+}
+
+.rz-w-50 {
+  width: 50% !important;
+}
+
+.rz-w-75 {
+  width: 75% !important;
+}
+
+.rz-w-100 {
+  width: 100% !important;
+}
+
+.rz-vw-25 {
+  width: 25vw !important;
+}
+
+.rz-vw-50 {
+  width: 50vw !important;
+}
+
+.rz-vw-75 {
+  width: 75vw !important;
+}
+
+.rz-vw-100 {
+  width: 100vw !important;
+}
+
+.rz-w-auto {
+  width: auto !important;
+}
+
+.rz-w-fit-content {
+  width: fit-content !important;
+}
+
+.rz-w-min-content {
+  width: min-content !important;
+}
+
+.rz-w-max-content {
+  width: max-content !important;
+}
+
+.rz-w-stretch {
+  width: stretch !important;
+}
+
+.rz-min-w-25 {
+  min-width: 25% !important;
+}
+
+.rz-min-w-50 {
+  min-width: 50% !important;
+}
+
+.rz-min-w-75 {
+  min-width: 75% !important;
+}
+
+.rz-min-w-100 {
+  min-width: 100% !important;
+}
+
+.rz-max-w-25 {
+  max-width: 25% !important;
+}
+
+.rz-max-w-50 {
+  max-width: 50% !important;
+}
+
+.rz-max-w-75 {
+  max-width: 75% !important;
+}
+
+.rz-max-w-100 {
+  max-width: 100% !important;
+}
+
+.rz-h-25 {
+  height: 25% !important;
+}
+
+.rz-h-50 {
+  height: 50% !important;
+}
+
+.rz-h-75 {
+  height: 75% !important;
+}
+
+.rz-h-100 {
+  height: 100% !important;
+}
+
+.rz-vh-25 {
+  height: 25vh !important;
+}
+
+.rz-vh-50 {
+  height: 50vh !important;
+}
+
+.rz-vh-75 {
+  height: 75vh !important;
+}
+
+.rz-vh-100 {
+  height: 100vh !important;
+}
+
+.rz-h-auto {
+  height: auto !important;
+}
+
+.rz-min-h-25 {
+  min-height: 25% !important;
+}
+
+.rz-min-h-50 {
+  min-height: 50% !important;
+}
+
+.rz-min-h-75 {
+  min-height: 75% !important;
+}
+
+.rz-min-h-100 {
+  min-height: 100% !important;
+}
+
+.rz-max-h-25 {
+  max-height: 25% !important;
+}
+
+.rz-max-h-50 {
+  max-height: 50% !important;
+}
+
+.rz-max-h-75 {
+  max-height: 75% !important;
+}
+
+.rz-max-h-100 {
+  max-height: 100% !important;
+}
+
 .rz-color-white {
   color: var(--rz-white) !important;
 }
@@ -1290,428 +1458,81 @@
   background-color: var(--rz-series-24) !important;
 }
 
-.rz-border-color-white {
-  border-color: var(--rz-white) !important;
+.rz-border {
+  border-width: 0;
+  border-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-black {
-  border-color: var(--rz-black) !important;
+.rz-border-0 {
+  border-width: 0 !important;
 }
 
-.rz-border-color-base {
-  border-color: var(--rz-base) !important;
+.rz-border-start {
+  border-width: 0;
+  border-inline-start-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-base-50 {
-  border-color: var(--rz-base-50) !important;
+.rz-border-start-0 {
+  border-inline-start-width: 0 !important;
 }
 
-.rz-border-color-base-100 {
-  border-color: var(--rz-base-100) !important;
+.rz-border-end {
+  border-width: 0;
+  border-inline-end-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-base-200 {
-  border-color: var(--rz-base-200) !important;
+.rz-border-end-0 {
+  border-inline-end-width: 0 !important;
 }
 
-.rz-border-color-base-300 {
-  border-color: var(--rz-base-300) !important;
+.rz-border-left {
+  border-width: 0;
+  border-left-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-base-400 {
-  border-color: var(--rz-base-400) !important;
+.rz-border-left-0 {
+  border-left-width: 0 !important;
 }
 
-.rz-border-color-base-500 {
-  border-color: var(--rz-base-500) !important;
+.rz-border-right {
+  border-width: 0;
+  border-right-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-base-600 {
-  border-color: var(--rz-base-600) !important;
+.rz-border-right-0 {
+  border-right-width: 0 !important;
 }
 
-.rz-border-color-base-700 {
-  border-color: var(--rz-base-700) !important;
+.rz-border-top {
+  border-width: 0;
+  border-top-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-base-800 {
-  border-color: var(--rz-base-800) !important;
+.rz-border-top-0 {
+  border-top-width: 0 !important;
 }
 
-.rz-border-color-base-900 {
-  border-color: var(--rz-base-900) !important;
+.rz-border-bottom {
+  border-width: 0;
+  border-bottom-width: var(--rz-border-width);
+  border-style: solid;
+  border-color: var(--rz-base);
 }
 
-.rz-border-color-base-light {
-  border-color: var(--rz-base-light) !important;
-}
-
-.rz-border-color-base-lighter {
-  border-color: var(--rz-base-lighter) !important;
-}
-
-.rz-border-color-base-dark {
-  border-color: var(--rz-base-dark) !important;
-}
-
-.rz-border-color-base-darker {
-  border-color: var(--rz-base-darker) !important;
-}
-
-.rz-border-color-primary {
-  border-color: var(--rz-primary) !important;
-}
-
-.rz-border-color-primary-light {
-  border-color: var(--rz-primary-light) !important;
-}
-
-.rz-border-color-primary-lighter {
-  border-color: var(--rz-primary-lighter) !important;
-}
-
-.rz-border-color-primary-dark {
-  border-color: var(--rz-primary-dark) !important;
-}
-
-.rz-border-color-primary-darker {
-  border-color: var(--rz-primary-darker) !important;
-}
-
-.rz-border-color-secondary {
-  border-color: var(--rz-secondary) !important;
-}
-
-.rz-border-color-secondary-light {
-  border-color: var(--rz-secondary-light) !important;
-}
-
-.rz-border-color-secondary-lighter {
-  border-color: var(--rz-secondary-lighter) !important;
-}
-
-.rz-border-color-secondary-dark {
-  border-color: var(--rz-secondary-dark) !important;
-}
-
-.rz-border-color-secondary-darker {
-  border-color: var(--rz-secondary-darker) !important;
-}
-
-.rz-border-color-info {
-  border-color: var(--rz-info) !important;
-}
-
-.rz-border-color-info-light {
-  border-color: var(--rz-info-light) !important;
-}
-
-.rz-border-color-info-lighter {
-  border-color: var(--rz-info-lighter) !important;
-}
-
-.rz-border-color-info-dark {
-  border-color: var(--rz-info-dark) !important;
-}
-
-.rz-border-color-info-darker {
-  border-color: var(--rz-info-darker) !important;
-}
-
-.rz-border-color-success {
-  border-color: var(--rz-success) !important;
-}
-
-.rz-border-color-success-light {
-  border-color: var(--rz-success-light) !important;
-}
-
-.rz-border-color-success-lighter {
-  border-color: var(--rz-success-lighter) !important;
-}
-
-.rz-border-color-success-dark {
-  border-color: var(--rz-success-dark) !important;
-}
-
-.rz-border-color-success-darker {
-  border-color: var(--rz-success-darker) !important;
-}
-
-.rz-border-color-warning {
-  border-color: var(--rz-warning) !important;
-}
-
-.rz-border-color-warning-light {
-  border-color: var(--rz-warning-light) !important;
-}
-
-.rz-border-color-warning-lighter {
-  border-color: var(--rz-warning-lighter) !important;
-}
-
-.rz-border-color-warning-dark {
-  border-color: var(--rz-warning-dark) !important;
-}
-
-.rz-border-color-warning-darker {
-  border-color: var(--rz-warning-darker) !important;
-}
-
-.rz-border-color-danger {
-  border-color: var(--rz-danger) !important;
-}
-
-.rz-border-color-danger-light {
-  border-color: var(--rz-danger-light) !important;
-}
-
-.rz-border-color-danger-lighter {
-  border-color: var(--rz-danger-lighter) !important;
-}
-
-.rz-border-color-danger-dark {
-  border-color: var(--rz-danger-dark) !important;
-}
-
-.rz-border-color-danger-darker {
-  border-color: var(--rz-danger-darker) !important;
-}
-
-.rz-border-color-on-base {
-  border-color: var(--rz-on-base) !important;
-}
-
-.rz-border-color-on-base-light {
-  border-color: var(--rz-on-base-light) !important;
-}
-
-.rz-border-color-on-base-lighter {
-  border-color: var(--rz-on-base-lighter) !important;
-}
-
-.rz-border-color-on-base-dark {
-  border-color: var(--rz-on-base-dark) !important;
-}
-
-.rz-border-color-on-base-darker {
-  border-color: var(--rz-on-base-darker) !important;
-}
-
-.rz-border-color-on-primary {
-  border-color: var(--rz-on-primary) !important;
-}
-
-.rz-border-color-on-primary-light {
-  border-color: var(--rz-on-primary-light) !important;
-}
-
-.rz-border-color-on-primary-lighter {
-  border-color: var(--rz-on-primary-lighter) !important;
-}
-
-.rz-border-color-on-primary-dark {
-  border-color: var(--rz-on-primary-dark) !important;
-}
-
-.rz-border-color-on-primary-darker {
-  border-color: var(--rz-on-primary-darker) !important;
-}
-
-.rz-border-color-on-secondary {
-  border-color: var(--rz-on-secondary) !important;
-}
-
-.rz-border-color-on-secondary-light {
-  border-color: var(--rz-on-secondary-light) !important;
-}
-
-.rz-border-color-on-secondary-lighter {
-  border-color: var(--rz-on-secondary-lighter) !important;
-}
-
-.rz-border-color-on-secondary-dark {
-  border-color: var(--rz-on-secondary-dark) !important;
-}
-
-.rz-border-color-on-secondary-darker {
-  border-color: var(--rz-on-secondary-darker) !important;
-}
-
-.rz-border-color-on-info {
-  border-color: var(--rz-on-info) !important;
-}
-
-.rz-border-color-on-info-light {
-  border-color: var(--rz-on-info-light) !important;
-}
-
-.rz-border-color-on-info-lighter {
-  border-color: var(--rz-on-info-lighter) !important;
-}
-
-.rz-border-color-on-info-dark {
-  border-color: var(--rz-on-info-dark) !important;
-}
-
-.rz-border-color-on-info-darker {
-  border-color: var(--rz-on-info-darker) !important;
-}
-
-.rz-border-color-on-success {
-  border-color: var(--rz-on-success) !important;
-}
-
-.rz-border-color-on-success-light {
-  border-color: var(--rz-on-success-light) !important;
-}
-
-.rz-border-color-on-success-lighter {
-  border-color: var(--rz-on-success-lighter) !important;
-}
-
-.rz-border-color-on-success-dark {
-  border-color: var(--rz-on-success-dark) !important;
-}
-
-.rz-border-color-on-success-darker {
-  border-color: var(--rz-on-success-darker) !important;
-}
-
-.rz-border-color-on-warning {
-  border-color: var(--rz-on-warning) !important;
-}
-
-.rz-border-color-on-warning-light {
-  border-color: var(--rz-on-warning-light) !important;
-}
-
-.rz-border-color-on-warning-lighter {
-  border-color: var(--rz-on-warning-lighter) !important;
-}
-
-.rz-border-color-on-warning-dark {
-  border-color: var(--rz-on-warning-dark) !important;
-}
-
-.rz-border-color-on-warning-darker {
-  border-color: var(--rz-on-warning-darker) !important;
-}
-
-.rz-border-color-on-danger {
-  border-color: var(--rz-on-danger) !important;
-}
-
-.rz-border-color-on-danger-light {
-  border-color: var(--rz-on-danger-light) !important;
-}
-
-.rz-border-color-on-danger-lighter {
-  border-color: var(--rz-on-danger-lighter) !important;
-}
-
-.rz-border-color-on-danger-dark {
-  border-color: var(--rz-on-danger-dark) !important;
-}
-
-.rz-border-color-on-danger-darker {
-  border-color: var(--rz-on-danger-darker) !important;
-}
-
-.rz-border-color-series-1 {
-  border-color: var(--rz-series-1) !important;
-}
-
-.rz-border-color-series-2 {
-  border-color: var(--rz-series-2) !important;
-}
-
-.rz-border-color-series-3 {
-  border-color: var(--rz-series-3) !important;
-}
-
-.rz-border-color-series-4 {
-  border-color: var(--rz-series-4) !important;
-}
-
-.rz-border-color-series-5 {
-  border-color: var(--rz-series-5) !important;
-}
-
-.rz-border-color-series-6 {
-  border-color: var(--rz-series-6) !important;
-}
-
-.rz-border-color-series-7 {
-  border-color: var(--rz-series-7) !important;
-}
-
-.rz-border-color-series-8 {
-  border-color: var(--rz-series-8) !important;
-}
-
-.rz-border-color-series-9 {
-  border-color: var(--rz-series-9) !important;
-}
-
-.rz-border-color-series-10 {
-  border-color: var(--rz-series-10) !important;
-}
-
-.rz-border-color-series-11 {
-  border-color: var(--rz-series-11) !important;
-}
-
-.rz-border-color-series-12 {
-  border-color: var(--rz-series-12) !important;
-}
-
-.rz-border-color-series-13 {
-  border-color: var(--rz-series-13) !important;
-}
-
-.rz-border-color-series-14 {
-  border-color: var(--rz-series-14) !important;
-}
-
-.rz-border-color-series-15 {
-  border-color: var(--rz-series-15) !important;
-}
-
-.rz-border-color-series-16 {
-  border-color: var(--rz-series-16) !important;
-}
-
-.rz-border-color-series-17 {
-  border-color: var(--rz-series-17) !important;
-}
-
-.rz-border-color-series-18 {
-  border-color: var(--rz-series-18) !important;
-}
-
-.rz-border-color-series-19 {
-  border-color: var(--rz-series-19) !important;
-}
-
-.rz-border-color-series-20 {
-  border-color: var(--rz-series-20) !important;
-}
-
-.rz-border-color-series-21 {
-  border-color: var(--rz-series-21) !important;
-}
-
-.rz-border-color-series-22 {
-  border-color: var(--rz-series-22) !important;
-}
-
-.rz-border-color-series-23 {
-  border-color: var(--rz-series-23) !important;
-}
-
-.rz-border-color-series-24 {
-  border-color: var(--rz-series-24) !important;
+.rz-border-bottom-0 {
+  border-bottom-width: 0 !important;
 }
 
 .rz-border-white {
@@ -2347,6 +2168,430 @@
 .rz-border-series-24 {
   border-width: var(--rz-border-width);
   border-style: solid;
+  border-color: var(--rz-series-24) !important;
+}
+
+.rz-border-color-white {
+  border-color: var(--rz-white) !important;
+}
+
+.rz-border-color-black {
+  border-color: var(--rz-black) !important;
+}
+
+.rz-border-color-base {
+  border-color: var(--rz-base) !important;
+}
+
+.rz-border-color-base-50 {
+  border-color: var(--rz-base-50) !important;
+}
+
+.rz-border-color-base-100 {
+  border-color: var(--rz-base-100) !important;
+}
+
+.rz-border-color-base-200 {
+  border-color: var(--rz-base-200) !important;
+}
+
+.rz-border-color-base-300 {
+  border-color: var(--rz-base-300) !important;
+}
+
+.rz-border-color-base-400 {
+  border-color: var(--rz-base-400) !important;
+}
+
+.rz-border-color-base-500 {
+  border-color: var(--rz-base-500) !important;
+}
+
+.rz-border-color-base-600 {
+  border-color: var(--rz-base-600) !important;
+}
+
+.rz-border-color-base-700 {
+  border-color: var(--rz-base-700) !important;
+}
+
+.rz-border-color-base-800 {
+  border-color: var(--rz-base-800) !important;
+}
+
+.rz-border-color-base-900 {
+  border-color: var(--rz-base-900) !important;
+}
+
+.rz-border-color-base-light {
+  border-color: var(--rz-base-light) !important;
+}
+
+.rz-border-color-base-lighter {
+  border-color: var(--rz-base-lighter) !important;
+}
+
+.rz-border-color-base-dark {
+  border-color: var(--rz-base-dark) !important;
+}
+
+.rz-border-color-base-darker {
+  border-color: var(--rz-base-darker) !important;
+}
+
+.rz-border-color-primary {
+  border-color: var(--rz-primary) !important;
+}
+
+.rz-border-color-primary-light {
+  border-color: var(--rz-primary-light) !important;
+}
+
+.rz-border-color-primary-lighter {
+  border-color: var(--rz-primary-lighter) !important;
+}
+
+.rz-border-color-primary-dark {
+  border-color: var(--rz-primary-dark) !important;
+}
+
+.rz-border-color-primary-darker {
+  border-color: var(--rz-primary-darker) !important;
+}
+
+.rz-border-color-secondary {
+  border-color: var(--rz-secondary) !important;
+}
+
+.rz-border-color-secondary-light {
+  border-color: var(--rz-secondary-light) !important;
+}
+
+.rz-border-color-secondary-lighter {
+  border-color: var(--rz-secondary-lighter) !important;
+}
+
+.rz-border-color-secondary-dark {
+  border-color: var(--rz-secondary-dark) !important;
+}
+
+.rz-border-color-secondary-darker {
+  border-color: var(--rz-secondary-darker) !important;
+}
+
+.rz-border-color-info {
+  border-color: var(--rz-info) !important;
+}
+
+.rz-border-color-info-light {
+  border-color: var(--rz-info-light) !important;
+}
+
+.rz-border-color-info-lighter {
+  border-color: var(--rz-info-lighter) !important;
+}
+
+.rz-border-color-info-dark {
+  border-color: var(--rz-info-dark) !important;
+}
+
+.rz-border-color-info-darker {
+  border-color: var(--rz-info-darker) !important;
+}
+
+.rz-border-color-success {
+  border-color: var(--rz-success) !important;
+}
+
+.rz-border-color-success-light {
+  border-color: var(--rz-success-light) !important;
+}
+
+.rz-border-color-success-lighter {
+  border-color: var(--rz-success-lighter) !important;
+}
+
+.rz-border-color-success-dark {
+  border-color: var(--rz-success-dark) !important;
+}
+
+.rz-border-color-success-darker {
+  border-color: var(--rz-success-darker) !important;
+}
+
+.rz-border-color-warning {
+  border-color: var(--rz-warning) !important;
+}
+
+.rz-border-color-warning-light {
+  border-color: var(--rz-warning-light) !important;
+}
+
+.rz-border-color-warning-lighter {
+  border-color: var(--rz-warning-lighter) !important;
+}
+
+.rz-border-color-warning-dark {
+  border-color: var(--rz-warning-dark) !important;
+}
+
+.rz-border-color-warning-darker {
+  border-color: var(--rz-warning-darker) !important;
+}
+
+.rz-border-color-danger {
+  border-color: var(--rz-danger) !important;
+}
+
+.rz-border-color-danger-light {
+  border-color: var(--rz-danger-light) !important;
+}
+
+.rz-border-color-danger-lighter {
+  border-color: var(--rz-danger-lighter) !important;
+}
+
+.rz-border-color-danger-dark {
+  border-color: var(--rz-danger-dark) !important;
+}
+
+.rz-border-color-danger-darker {
+  border-color: var(--rz-danger-darker) !important;
+}
+
+.rz-border-color-on-base {
+  border-color: var(--rz-on-base) !important;
+}
+
+.rz-border-color-on-base-light {
+  border-color: var(--rz-on-base-light) !important;
+}
+
+.rz-border-color-on-base-lighter {
+  border-color: var(--rz-on-base-lighter) !important;
+}
+
+.rz-border-color-on-base-dark {
+  border-color: var(--rz-on-base-dark) !important;
+}
+
+.rz-border-color-on-base-darker {
+  border-color: var(--rz-on-base-darker) !important;
+}
+
+.rz-border-color-on-primary {
+  border-color: var(--rz-on-primary) !important;
+}
+
+.rz-border-color-on-primary-light {
+  border-color: var(--rz-on-primary-light) !important;
+}
+
+.rz-border-color-on-primary-lighter {
+  border-color: var(--rz-on-primary-lighter) !important;
+}
+
+.rz-border-color-on-primary-dark {
+  border-color: var(--rz-on-primary-dark) !important;
+}
+
+.rz-border-color-on-primary-darker {
+  border-color: var(--rz-on-primary-darker) !important;
+}
+
+.rz-border-color-on-secondary {
+  border-color: var(--rz-on-secondary) !important;
+}
+
+.rz-border-color-on-secondary-light {
+  border-color: var(--rz-on-secondary-light) !important;
+}
+
+.rz-border-color-on-secondary-lighter {
+  border-color: var(--rz-on-secondary-lighter) !important;
+}
+
+.rz-border-color-on-secondary-dark {
+  border-color: var(--rz-on-secondary-dark) !important;
+}
+
+.rz-border-color-on-secondary-darker {
+  border-color: var(--rz-on-secondary-darker) !important;
+}
+
+.rz-border-color-on-info {
+  border-color: var(--rz-on-info) !important;
+}
+
+.rz-border-color-on-info-light {
+  border-color: var(--rz-on-info-light) !important;
+}
+
+.rz-border-color-on-info-lighter {
+  border-color: var(--rz-on-info-lighter) !important;
+}
+
+.rz-border-color-on-info-dark {
+  border-color: var(--rz-on-info-dark) !important;
+}
+
+.rz-border-color-on-info-darker {
+  border-color: var(--rz-on-info-darker) !important;
+}
+
+.rz-border-color-on-success {
+  border-color: var(--rz-on-success) !important;
+}
+
+.rz-border-color-on-success-light {
+  border-color: var(--rz-on-success-light) !important;
+}
+
+.rz-border-color-on-success-lighter {
+  border-color: var(--rz-on-success-lighter) !important;
+}
+
+.rz-border-color-on-success-dark {
+  border-color: var(--rz-on-success-dark) !important;
+}
+
+.rz-border-color-on-success-darker {
+  border-color: var(--rz-on-success-darker) !important;
+}
+
+.rz-border-color-on-warning {
+  border-color: var(--rz-on-warning) !important;
+}
+
+.rz-border-color-on-warning-light {
+  border-color: var(--rz-on-warning-light) !important;
+}
+
+.rz-border-color-on-warning-lighter {
+  border-color: var(--rz-on-warning-lighter) !important;
+}
+
+.rz-border-color-on-warning-dark {
+  border-color: var(--rz-on-warning-dark) !important;
+}
+
+.rz-border-color-on-warning-darker {
+  border-color: var(--rz-on-warning-darker) !important;
+}
+
+.rz-border-color-on-danger {
+  border-color: var(--rz-on-danger) !important;
+}
+
+.rz-border-color-on-danger-light {
+  border-color: var(--rz-on-danger-light) !important;
+}
+
+.rz-border-color-on-danger-lighter {
+  border-color: var(--rz-on-danger-lighter) !important;
+}
+
+.rz-border-color-on-danger-dark {
+  border-color: var(--rz-on-danger-dark) !important;
+}
+
+.rz-border-color-on-danger-darker {
+  border-color: var(--rz-on-danger-darker) !important;
+}
+
+.rz-border-color-series-1 {
+  border-color: var(--rz-series-1) !important;
+}
+
+.rz-border-color-series-2 {
+  border-color: var(--rz-series-2) !important;
+}
+
+.rz-border-color-series-3 {
+  border-color: var(--rz-series-3) !important;
+}
+
+.rz-border-color-series-4 {
+  border-color: var(--rz-series-4) !important;
+}
+
+.rz-border-color-series-5 {
+  border-color: var(--rz-series-5) !important;
+}
+
+.rz-border-color-series-6 {
+  border-color: var(--rz-series-6) !important;
+}
+
+.rz-border-color-series-7 {
+  border-color: var(--rz-series-7) !important;
+}
+
+.rz-border-color-series-8 {
+  border-color: var(--rz-series-8) !important;
+}
+
+.rz-border-color-series-9 {
+  border-color: var(--rz-series-9) !important;
+}
+
+.rz-border-color-series-10 {
+  border-color: var(--rz-series-10) !important;
+}
+
+.rz-border-color-series-11 {
+  border-color: var(--rz-series-11) !important;
+}
+
+.rz-border-color-series-12 {
+  border-color: var(--rz-series-12) !important;
+}
+
+.rz-border-color-series-13 {
+  border-color: var(--rz-series-13) !important;
+}
+
+.rz-border-color-series-14 {
+  border-color: var(--rz-series-14) !important;
+}
+
+.rz-border-color-series-15 {
+  border-color: var(--rz-series-15) !important;
+}
+
+.rz-border-color-series-16 {
+  border-color: var(--rz-series-16) !important;
+}
+
+.rz-border-color-series-17 {
+  border-color: var(--rz-series-17) !important;
+}
+
+.rz-border-color-series-18 {
+  border-color: var(--rz-series-18) !important;
+}
+
+.rz-border-color-series-19 {
+  border-color: var(--rz-series-19) !important;
+}
+
+.rz-border-color-series-20 {
+  border-color: var(--rz-series-20) !important;
+}
+
+.rz-border-color-series-21 {
+  border-color: var(--rz-series-21) !important;
+}
+
+.rz-border-color-series-22 {
+  border-color: var(--rz-series-22) !important;
+}
+
+.rz-border-color-series-23 {
+  border-color: var(--rz-series-23) !important;
+}
+
+.rz-border-color-series-24 {
   border-color: var(--rz-series-24) !important;
 }
 
@@ -8427,13 +8672,15 @@ i.rzi {
 .rz-pager-element:not(.rz-state-disabled), .rz-button:not(.rz-state-disabled) {
   cursor: pointer;
 }
-.rz-pager-element:not(.rz-state-disabled):hover:not(:active), .rz-button:not(.rz-state-disabled):hover:not(:active) {
-  text-decoration: none;
-  background-image: var(--rz-button-hover-gradient);
-  background-size: var(--rz-button-hover-background-size);
-  box-shadow: var(--rz-button-hover-shadow);
+@media (hover: hover) and (pointer: fine) {
+  .rz-pager-element:not(.rz-state-disabled):not(:active):hover, .rz-button:not(.rz-state-disabled):not(:active):hover {
+    text-decoration: none;
+    background-image: var(--rz-button-hover-gradient);
+    background-size: var(--rz-button-hover-background-size);
+    box-shadow: var(--rz-button-hover-shadow);
+  }
 }
-.rz-pager-element:not(.rz-state-disabled):focus-visible:not(:active), .rz-button:not(.rz-state-disabled):focus-visible:not(:active) {
+.rz-pager-element:not(.rz-state-disabled):not(:active):focus-visible, .rz-button:not(.rz-state-disabled):not(:active):focus-visible {
   text-decoration: none;
   background-image: var(--rz-button-focus-gradient);
   background-size: var(--rz-button-focus-background-size);
@@ -8800,7 +9047,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-primary-darker);
   color: var(--rz-primary-darker);
 }
-.rz-button.rz-variant-outlined.rz-primary:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-primary:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-primary:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-primary:not(.rz-state-disabled):hover {
+    background-color: var(--rz-primary-lighter);
+    color: var(--rz-on-primary-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-primary:not(.rz-state-disabled):active {
   background-color: var(--rz-primary-lighter);
   color: var(--rz-on-primary-lighter);
   background-image: none;
@@ -8829,7 +9083,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-secondary-darker);
   color: var(--rz-secondary-darker);
 }
-.rz-button.rz-variant-outlined.rz-secondary:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-secondary:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-secondary:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-secondary:not(.rz-state-disabled):hover {
+    background-color: var(--rz-secondary-lighter);
+    color: var(--rz-on-secondary-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-secondary:not(.rz-state-disabled):active {
   background-color: var(--rz-secondary-lighter);
   color: var(--rz-on-secondary-lighter);
   background-image: none;
@@ -8858,7 +9119,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-info-darker);
   color: var(--rz-info-darker);
 }
-.rz-button.rz-variant-outlined.rz-info:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-info:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-info:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-info:not(.rz-state-disabled):hover {
+    background-color: var(--rz-info-lighter);
+    color: var(--rz-on-info-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-info:not(.rz-state-disabled):active {
   background-color: var(--rz-info-lighter);
   color: var(--rz-on-info-lighter);
   background-image: none;
@@ -8887,7 +9155,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-warning-darker);
   color: var(--rz-warning-darker);
 }
-.rz-button.rz-variant-outlined.rz-warning:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-warning:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-warning:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-warning:not(.rz-state-disabled):hover {
+    background-color: var(--rz-warning-lighter);
+    color: var(--rz-on-warning-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-warning:not(.rz-state-disabled):active {
   background-color: var(--rz-warning-lighter);
   color: var(--rz-on-warning-lighter);
   background-image: none;
@@ -8916,7 +9191,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-error-darker);
   color: var(--rz-error-darker);
 }
-.rz-button.rz-variant-outlined.rz-error:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-error:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-error:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-error:not(.rz-state-disabled):hover {
+    background-color: var(--rz-error-lighter);
+    color: var(--rz-on-error-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-error:not(.rz-state-disabled):active {
   background-color: var(--rz-error-lighter);
   color: var(--rz-on-error-lighter);
   background-image: none;
@@ -8945,7 +9227,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-danger-darker);
   color: var(--rz-danger-darker);
 }
-.rz-button.rz-variant-outlined.rz-danger:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-danger:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-danger:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-danger:not(.rz-state-disabled):hover {
+    background-color: var(--rz-danger-lighter);
+    color: var(--rz-on-danger-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-danger:not(.rz-state-disabled):active {
   background-color: var(--rz-danger-lighter);
   color: var(--rz-on-danger-lighter);
   background-image: none;
@@ -8974,7 +9263,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-success-darker);
   color: var(--rz-success-darker);
 }
-.rz-button.rz-variant-outlined.rz-success:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-success:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-success:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-success:not(.rz-state-disabled):hover {
+    background-color: var(--rz-success-lighter);
+    color: var(--rz-on-success-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-success:not(.rz-state-disabled):active {
   background-color: var(--rz-success-lighter);
   color: var(--rz-on-success-lighter);
   background-image: none;
@@ -9003,7 +9299,14 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-base-darker);
   color: var(--rz-base-darker);
 }
-.rz-button.rz-variant-outlined.rz-base:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-base:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-base:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-base:not(.rz-state-disabled):hover {
+    background-color: var(--rz-base-lighter);
+    color: var(--rz-on-base-lighter);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-base:not(.rz-state-disabled):active {
   background-color: var(--rz-base-lighter);
   color: var(--rz-on-base-lighter);
   background-image: none;
@@ -9016,7 +9319,13 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-base-500);
   color: var(--rz-base-500);
 }
-.rz-button.rz-variant-outlined.rz-light:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-light:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-light:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-light:not(.rz-state-disabled):hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-light:not(.rz-state-disabled):active {
   background-color: rgba(255, 255, 255, 0.12);
   background-image: none;
 }
@@ -9028,7 +9337,13 @@ i.rzi {
   box-shadow: inset 0 0 0 var(--rz-border-width) var(--rz-base-900);
   color: var(--rz-base-900);
 }
-.rz-button.rz-variant-outlined.rz-dark:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-outlined.rz-dark:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-outlined.rz-dark:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-outlined.rz-dark:not(.rz-state-disabled):hover {
+    background-color: rgba(0, 0, 0, 0.12);
+    background-image: none;
+  }
+}
+.rz-button.rz-variant-outlined.rz-dark:not(.rz-state-disabled):active {
   background-color: rgba(0, 0, 0, 0.12);
   background-image: none;
 }
@@ -9052,7 +9367,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-primary.rz-shade-darker {
   color: var(--rz-primary-darker);
 }
-.rz-button.rz-variant-text.rz-primary:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-primary:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-primary:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-primary:not(.rz-state-disabled):hover {
+    background-color: var(--rz-primary-lighter);
+    color: var(--rz-on-primary-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-primary:not(.rz-state-disabled):active {
   background-color: var(--rz-primary-lighter);
   color: var(--rz-on-primary-lighter);
   background-image: none;
@@ -9078,7 +9401,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-secondary.rz-shade-darker {
   color: var(--rz-secondary-darker);
 }
-.rz-button.rz-variant-text.rz-secondary:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-secondary:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-secondary:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-secondary:not(.rz-state-disabled):hover {
+    background-color: var(--rz-secondary-lighter);
+    color: var(--rz-on-secondary-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-secondary:not(.rz-state-disabled):active {
   background-color: var(--rz-secondary-lighter);
   color: var(--rz-on-secondary-lighter);
   background-image: none;
@@ -9104,7 +9435,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-info.rz-shade-darker {
   color: var(--rz-info-darker);
 }
-.rz-button.rz-variant-text.rz-info:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-info:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-info:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-info:not(.rz-state-disabled):hover {
+    background-color: var(--rz-info-lighter);
+    color: var(--rz-on-info-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-info:not(.rz-state-disabled):active {
   background-color: var(--rz-info-lighter);
   color: var(--rz-on-info-lighter);
   background-image: none;
@@ -9130,7 +9469,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-warning.rz-shade-darker {
   color: var(--rz-warning-darker);
 }
-.rz-button.rz-variant-text.rz-warning:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-warning:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-warning:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-warning:not(.rz-state-disabled):hover {
+    background-color: var(--rz-warning-lighter);
+    color: var(--rz-on-warning-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-warning:not(.rz-state-disabled):active {
   background-color: var(--rz-warning-lighter);
   color: var(--rz-on-warning-lighter);
   background-image: none;
@@ -9156,7 +9503,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-error.rz-shade-darker {
   color: var(--rz-error-darker);
 }
-.rz-button.rz-variant-text.rz-error:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-error:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-error:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-error:not(.rz-state-disabled):hover {
+    background-color: var(--rz-error-lighter);
+    color: var(--rz-on-error-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-error:not(.rz-state-disabled):active {
   background-color: var(--rz-error-lighter);
   color: var(--rz-on-error-lighter);
   background-image: none;
@@ -9182,7 +9537,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-danger.rz-shade-darker {
   color: var(--rz-danger-darker);
 }
-.rz-button.rz-variant-text.rz-danger:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-danger:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-danger:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-danger:not(.rz-state-disabled):hover {
+    background-color: var(--rz-danger-lighter);
+    color: var(--rz-on-danger-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-danger:not(.rz-state-disabled):active {
   background-color: var(--rz-danger-lighter);
   color: var(--rz-on-danger-lighter);
   background-image: none;
@@ -9208,7 +9571,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-success.rz-shade-darker {
   color: var(--rz-success-darker);
 }
-.rz-button.rz-variant-text.rz-success:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-success:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-success:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-success:not(.rz-state-disabled):hover {
+    background-color: var(--rz-success-lighter);
+    color: var(--rz-on-success-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-success:not(.rz-state-disabled):active {
   background-color: var(--rz-success-lighter);
   color: var(--rz-on-success-lighter);
   background-image: none;
@@ -9234,7 +9605,15 @@ i.rzi {
 .rz-button.rz-variant-text.rz-base.rz-shade-darker {
   color: var(--rz-base-darker);
 }
-.rz-button.rz-variant-text.rz-base:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-base:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-base:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-base:not(.rz-state-disabled):hover {
+    background-color: var(--rz-base-lighter);
+    color: var(--rz-on-base-lighter);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-base:not(.rz-state-disabled):active {
   background-color: var(--rz-base-lighter);
   color: var(--rz-on-base-lighter);
   background-image: none;
@@ -9246,7 +9625,14 @@ i.rzi {
   background-color: transparent;
   box-shadow: none;
 }
-.rz-button.rz-variant-text.rz-light:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-light:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-light:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-light:not(.rz-state-disabled):hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-light:not(.rz-state-disabled):active {
   background-color: rgba(255, 255, 255, 0.12);
   background-image: none;
   box-shadow: none;
@@ -9257,7 +9643,14 @@ i.rzi {
   background-color: transparent;
   box-shadow: none;
 }
-.rz-button.rz-variant-text.rz-dark:not(.rz-state-disabled):hover:not(:active), .rz-button.rz-variant-text.rz-dark:not(.rz-state-disabled):focus-visible:not(:active), .rz-button.rz-variant-text.rz-dark:not(.rz-state-disabled):active {
+@media (hover: hover) and (pointer: fine) {
+  .rz-button.rz-variant-text.rz-dark:not(.rz-state-disabled):hover {
+    background-color: rgba(0, 0, 0, 0.12);
+    background-image: none;
+    box-shadow: none;
+  }
+}
+.rz-button.rz-variant-text.rz-dark:not(.rz-state-disabled):active {
   background-color: rgba(0, 0, 0, 0.12);
   background-image: none;
   box-shadow: none;
@@ -13667,6 +14060,7 @@ a:focus-visible .rz-fieldset-toggler {
 .rz-treenode-content .rz-treenode-label {
   display: flex;
   align-items: center;
+  cursor: inherit;
   padding-block: var(--rz-tree-node-padding-block);
   padding-inline: var(--rz-tree-node-padding-inline);
 }
@@ -19141,6 +19535,8 @@ button.rz-colorpicker-trigger .rzi:before {
   --rz-input-height: var(--rz-form-field-filled-height);
   --rz-input-padding-block: var(--rz-form-field-filled-padding-block);
   --rz-input-padding-inline: var(--rz-form-field-filled-padding-inline);
+  --rz-dropdown-chips-padding-block: var(--rz-form-field-filled-padding-block);
+  --rz-dropdown-chips-padding-inline: var(--rz-form-field-filled-padding-inline);
   --rz-numeric-input-padding-block: var(--rz-form-field-filled-numeric-padding-block);
   --rz-numeric-input-padding-inline: var(--rz-form-field-filled-numeric-padding-inline);
   --rz-form-field-label-floating-top: var(--rz-form-field-filled-label-floating-top);
