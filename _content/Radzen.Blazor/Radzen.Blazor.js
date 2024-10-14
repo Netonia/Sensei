@@ -59,6 +59,12 @@ window.Radzen = {
               return formatted;
           }
 
+          if (window.safari !== undefined) {
+              el.onblur = function (e) {
+                  el.dispatchEvent(new Event('change'));
+              };
+          }
+
           var start = el.selectionStart != el.value.length ? el.selectionStart : -1;
           var end = el.selectionEnd != el.value.length ? el.selectionEnd : -1;
 
@@ -349,9 +355,10 @@ window.Radzen = {
       if (!el || !ref) return;
 
       var hidden = el.querySelector('input[type="hidden"]');
-      var inputs = [...el.querySelectorAll('.rz-security-code-input')];
 
       Radzen[id] = {};
+
+      Radzen[id].inputs = [...el.querySelectorAll('.rz-security-code-input')];
 
       Radzen[id].paste = function (e) {
           if (e.clipboardData) {
@@ -362,15 +369,15 @@ window.Radzen = {
                       if (isNumber && isNaN(+value[i])) {
                           continue;
                       }
-                      inputs[i].value = value[i];
+                      Radzen[id].inputs[i].value = value[i];
                   }
 
-                  var code = inputs.map(i => i.value).join('').trim();
+                  var code = Radzen[id].inputs.map(i => i.value).join('').trim();
                   hidden.value = code;
 
                   ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', code);
 
-                  inputs[inputs.length - 1].focus();
+                  Radzen[id].inputs[Radzen[id].inputs.length - 1].focus();
               }
 
               e.preventDefault();
@@ -400,14 +407,14 @@ window.Radzen = {
 
           e.currentTarget.value = ch;
 
-          var value = inputs.map(i => i.value).join('').trim();
+          var value = Radzen[id].inputs.map(i => i.value).join('').trim();
           hidden.value = value;
 
           ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value);
 
-          var index = inputs.indexOf(e.currentTarget);
-          if (index < inputs.length - 1) {
-              inputs[index + 1].focus();
+          var index = Radzen[id].inputs.indexOf(e.currentTarget);
+          if (index < Radzen[id].inputs.length - 1) {
+              Radzen[id].inputs[index + 1].focus();
           }
       }
 
@@ -416,22 +423,22 @@ window.Radzen = {
           if (keyCode == 8) {
               e.currentTarget.value = '';
 
-              var value = inputs.map(i => i.value).join('').trim();
+              var value = Radzen[id].inputs.map(i => i.value).join('').trim();
               hidden.value = value;
 
               ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value);
 
-              var index = inputs.indexOf(e.currentTarget);
+              var index = Radzen[id].inputs.indexOf(e.currentTarget);
               if (index > 0) {
-                  inputs[index - 1].focus();
+                  Radzen[id].inputs[index - 1].focus();
               }
           }
       }
 
-      for (var i = 0; i < inputs.length; i++) {
-          inputs[i].addEventListener(navigator.userAgent.match(/Android/i) ? 'textInput' : 'keypress', Radzen[id].keyPress);
-          inputs[i].addEventListener(navigator.userAgent.match(/Android/i) ? 'textInput' : 'keydown', Radzen[id].keyDown);
-          inputs[i].addEventListener('paste', Radzen[id].paste);
+      for (var i = 0; i < Radzen[id].inputs.length; i++) {
+          Radzen[id].inputs[i].addEventListener(navigator.userAgent.match(/Android/i) ? 'textInput' : 'keypress', Radzen[id].keyPress);
+          Radzen[id].inputs[i].addEventListener(navigator.userAgent.match(/Android/i) ? 'textInput' : 'keydown', Radzen[id].keyDown);
+          Radzen[id].inputs[i].addEventListener('paste', Radzen[id].paste);
       }
   },
   createSlider: function (
@@ -554,6 +561,9 @@ window.Radzen = {
       el.focus();
     }
   },
+  scrollCarouselItem: function (el) {
+    el.parentElement.scroll(el.offsetLeft, 0);
+  },
   scrollIntoViewIfNeeded: function (ref, selector) {
     var el = selector ? ref.getElementsByClassName(selector)[0] : ref;
     if (el && el.scrollIntoViewIfNeeded) {
@@ -602,9 +612,9 @@ window.Radzen = {
                 break;
         }
     } else {
-        while (ul.nextSelectedIndex > 0) {
+        while (ul.nextSelectedIndex >= 0) {
             ul.nextSelectedIndex--;
-            if (!childNodes[ul.nextSelectedIndex].classList.contains('rz-state-disabled'))
+            if (!childNodes[ul.nextSelectedIndex] || !childNodes[ul.nextSelectedIndex].classList.contains('rz-state-disabled'))
                 break;
         }
     }
@@ -674,25 +684,25 @@ window.Radzen = {
     if (key == 'ArrowDown') {
         while (table.nextSelectedIndex < rows.length - 1) {
             table.nextSelectedIndex++;
-            if (!rows[table.nextSelectedIndex].classList.contains('rz-state-disabled'))
+            if (!rows[table.nextSelectedIndex] || !rows[table.nextSelectedIndex].classList.contains('rz-state-disabled'))
                 break;
         }
     } else if (key == 'ArrowUp') {
         while (table.nextSelectedIndex > 0) {
             table.nextSelectedIndex--;
-            if (!rows[table.nextSelectedIndex].classList.contains('rz-state-disabled'))
+            if (!rows[table.nextSelectedIndex] || !rows[table.nextSelectedIndex].classList.contains('rz-state-disabled'))
                 break;
         }
     } else if (key == 'ArrowRight') {
         while (table.nextSelectedCellIndex < rows[table.nextSelectedIndex].cells.length - 1) {
             table.nextSelectedCellIndex++;
-            if (!rows[table.nextSelectedIndex].cells[table.nextSelectedCellIndex].classList.contains('rz-state-disabled'))
+            if (!rows[table.nextSelectedIndex] || !rows[table.nextSelectedIndex].cells[table.nextSelectedCellIndex] || !rows[table.nextSelectedIndex].cells[table.nextSelectedCellIndex].classList.contains('rz-state-disabled'))
                 break;
         }
     } else if (key == 'ArrowLeft') {
         while (table.nextSelectedCellIndex > 0) {
             table.nextSelectedCellIndex--;
-            if (!rows[table.nextSelectedIndex].cells[table.nextSelectedCellIndex].classList.contains('rz-state-disabled'))
+            if (!rows[table.nextSelectedIndex] || !rows[table.nextSelectedIndex].cells[table.nextSelectedCellIndex] || !rows[table.nextSelectedIndex].cells[table.nextSelectedCellIndex].classList.contains('rz-state-disabled'))
                 break;
         }
     } else if (isVirtual && (key == 'PageDown' || key == 'End')) {
@@ -701,7 +711,7 @@ window.Radzen = {
         table.nextSelectedIndex = 1;
     }
 
-    if (key == 'ArrowLeft' || key == 'ArrowRight' || (key == 'ArrowUp' && table.nextSelectedIndex == 0 && table.parentNode.scrollTop == 0)) {
+    if (key == 'ArrowLeft' || key == 'ArrowRight' || (key == 'ArrowUp' && cellIndex != null && table.nextSelectedIndex == 0 && table.parentNode.scrollTop == 0)) {
         var highlightedCells = rows[table.nextSelectedIndex].querySelectorAll('.rz-state-focused');
         if (highlightedCells.length) {
             for (var i = 0; i < highlightedCells.length; i++) {
@@ -984,6 +994,7 @@ window.Radzen = {
     }
   },
   closeTooltip(id) {
+    Radzen.activeElement = null;
     Radzen.closePopup(id);
 
     if (Radzen[id + 'delay']) {
@@ -1015,16 +1026,17 @@ window.Radzen = {
           }
       };
 
+      var input = el.querySelector('.rz-inputtext');
       var button = el.querySelector('.rz-datepicker-trigger');
       if (button) {
           button.onclick = function (e) {
-              handler(e, !e.currentTarget.classList.contains('rz-state-disabled'));
+              handler(e, !e.currentTarget.classList.contains('rz-state-disabled') && (input ? !input.classList.contains('rz-readonly') : true));
           };
       }
-      var input = el.querySelector('.rz-inputtext');
+  
       if (input) {
           input.onclick = function (e) {
-              handler(e, e.currentTarget.classList.contains('rz-readonly') || e.currentTarget.classList.contains('rz-input-trigger') );
+              handler(e, e.currentTarget.classList.contains('rz-input-trigger') && !e.currentTarget.classList.contains('rz-readonly'));
           };
       }
   },
@@ -1099,6 +1111,21 @@ window.Radzen = {
 
     var smartPosition = !position || position == 'bottom';
 
+    var scrollbarSize = 20;
+    var el = parent;
+    while (el && el != document.documentElement) {
+        if (el.scrollWidth > el.clientWidth) {
+            scrollbarSize = el.scrollWidth - el.clientWidth;
+            break;
+        }
+
+        if (el.scrollHeight > el.clientHeight) {
+            scrollbarSize = el.scrollHeight - el.clientHeight;
+            break;
+        }
+        el = el.parentElement;
+    }
+
     if (smartPosition && top + rect.height > window.innerHeight && parentRect.top > rect.height) {
         if (disableSmartPosition !== true) {
             top = parentRect.top - rect.height;
@@ -1115,7 +1142,7 @@ window.Radzen = {
       }
     }
 
-    if (smartPosition && left + rect.width > window.innerWidth && window.innerWidth > rect.width) {
+    if (smartPosition && left + rect.width > window.innerWidth + scrollbarSize && window.innerWidth + scrollbarSize > rect.width) {
       left = window.innerWidth - rect.width;
 
       if (position) {
@@ -1396,6 +1423,7 @@ window.Radzen = {
         var lastDialog = dialogs[dialogs.length - 1];
 
         if (lastDialog) {
+            lastDialog.options = options;
             lastDialog.removeEventListener('keydown', Radzen.focusTrap);
             lastDialog.addEventListener('keydown', Radzen.focusTrap);
 
@@ -1527,15 +1555,20 @@ window.Radzen = {
               }
           }
 
-          Radzen.dialogService.invokeMethodAsync('DialogService.Close', null);
-
           var dialogs = document.querySelectorAll('.rz-dialog-content');
-          if (dialogs.length <= 1) {
-              document.removeEventListener('keydown', Radzen.closePopupOrDialog);
-              delete Radzen.dialogService;
-              var layout = document.querySelector('.rz-layout');
-              if (layout) {
-                  layout.removeEventListener('keydown', Radzen.disableKeydown);
+          if (dialogs.length == 0) return;
+          var lastDialog = dialogs[dialogs.length - 1];
+
+          if (lastDialog && lastDialog.options && lastDialog.options.closeDialogOnEsc) {
+              Radzen.dialogService.invokeMethodAsync('DialogService.Close', null);
+
+              if (dialogs.length <= 1) {
+                  document.removeEventListener('keydown', Radzen.closePopupOrDialog);
+                  delete Radzen.dialogService;
+                  var layout = document.querySelector('.rz-layout');
+                  if (layout) {
+                      layout.removeEventListener('keydown', Radzen.disableKeydown);
+                  }
               }
           }
       }

@@ -13768,6 +13768,7 @@ a:focus-visible .rz-fieldset-toggler {
 .rz-data-grid-data {
   overflow: auto;
   flex: 1;
+  outline: var(--rz-outline-normal);
   box-shadow: var(--rz-grid-data-border-shadow);
 }
 
@@ -15218,7 +15219,7 @@ a:focus-visible .rz-fieldset-toggler {
   border-radius: var(--rz-tabs-border-radius) 0 0 var(--rz-tabs-border-radius);
 }
 
-@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+@media screen and (forced-colors: active), (forced-colors: none) {
   .rz-tabview-panels {
     flex: auto;
   }
@@ -19706,6 +19707,9 @@ button.rz-colorpicker-trigger .rzi:before {
 .rz-form-field-content > *, .rz-form-field-content > .rz-autocomplete, .rz-form-field-content > .rz-autocomplete.rz-state-disabled > .rz-inputtext, .rz-form-field-content input, .rz-form-field-content .rz-inputtext, .rz-form-field-content .rz-inputtext.rz-state-disabled, .rz-form-field-content .rz-datepicker.rz-state-disabled > .rz-inputtext {
   flex: 1;
 }
+.rz-form-field-content > input {
+  width: 100%;
+}
 .rz-form-field-content .rz-form-field-start,
 .rz-form-field-content .rz-form-field-end {
   display: flex;
@@ -20488,6 +20492,142 @@ button.rz-colorpicker-trigger .rzi:before {
   transform: rotate(90deg);
 }
 
+.rz-carousel {
+  position: relative;
+  overflow: hidden;
+  scrollbar-color: transparent transparent;
+  border-radius: var(--rz-carousel-border-radius);
+}
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-pager-top ~ .rz-carousel-items,
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-items:has(+ .rz-carousel-pager-bottom) {
+  height: calc(100% - var(--rz-carousel-pager-height));
+}
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-pager-top ~ .rz-carousel-items:has(+ .rz-carousel-pager-bottom) {
+  height: calc(100% - 2 * var(--rz-carousel-pager-height));
+}
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-pager-top ~ .rz-carousel-prev,
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-pager-top ~ .rz-carousel-next {
+  inset-block-start: calc(50% + var(--rz-carousel-pager-height) / 2);
+}
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-prev:has(~ .rz-carousel-pager-bottom),
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-next:has(~ .rz-carousel-pager-bottom) {
+  inset-block-start: calc(50% - var(--rz-carousel-pager-height) / 2);
+}
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-pager-top ~ .rz-carousel-prev:has(~ .rz-carousel-pager-bottom),
+.rz-carousel:not(.rz-carousel-pager-overlay) .rz-carousel-pager-top ~ .rz-carousel-next:has(~ .rz-carousel-pager-bottom) {
+  inset-block-start: 50%;
+}
+
+.rz-carousel-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  display: flex;
+  overflow-x: scroll;
+  counter-reset: item;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  border-radius: var(--rz-carousel-border-radius);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.rz-carousel-items::-webkit-scrollbar {
+  display: none;
+}
+
+.rz-carousel-item {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  counter-increment: item;
+  scrollbar-color: initial;
+  scrollbar-width: initial;
+  -ms-overflow-style: initial;
+}
+
+.rz-carousel-snapper {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: center;
+}
+
+.rz-carousel-pager {
+  gap: var(--rz-carousel-pager-gap);
+  height: var(--rz-carousel-pager-height);
+}
+
+.rz-carousel-pager-button {
+  cursor: pointer;
+  width: var(--rz-carousel-pager-button-width);
+  height: var(--rz-carousel-pager-button-height);
+  border: var(--rz-carousel-pager-button-border);
+  border-radius: var(--rz-carousel-pager-button-border-radius);
+  background-color: var(--rz-carousel-pager-button-background-color);
+  color: var(--rz-carousel-pager-button-color);
+  transition: var(--rz-button-transition);
+  -webkit-appearance: none;
+}
+.rz-carousel-pager-button:hover {
+  border: var(--rz-carousel-pager-button-hover-border);
+  background-color: var(--rz-carousel-pager-button-hover-background-color);
+  color: var(--rz-carousel-pager-button-hover-color);
+}
+.rz-carousel-pager-button.rz-state-active {
+  width: var(--rz-carousel-pager-button-active-width);
+  height: var(--rz-carousel-pager-button-active-height);
+  border: var(--rz-carousel-pager-button-active-border);
+  background-color: var(--rz-carousel-pager-button-active-background-color);
+  color: var(--rz-carousel-pager-button-active-color);
+}
+
+.rz-carousel-pager-overlay .rz-carousel-pager {
+  position: absolute;
+  z-index: 998;
+  inset-inline: 0;
+  opacity: var(--rz-carousel-pager-overlay-opacity);
+}
+.rz-carousel-pager-overlay .rz-carousel-pager-top {
+  inset-block-start: 0;
+}
+.rz-carousel-pager-overlay .rz-carousel-pager-bottom {
+  inset-block-end: 0;
+}
+
+.rz-carousel-prev,
+.rz-carousel-next {
+  position: absolute;
+  z-index: 999;
+  inset-block-start: 50%; /* calc(50% - var(--rz-carousel-pager-height)/2) */
+  transform: translateY(-50%);
+  border-radius: var(--rz-carousel-prev-next-button-border-radius);
+}
+
+.rz-carousel-prev {
+  inset-inline-start: var(--rz-carousel-prev-next-button-inset);
+}
+
+.rz-carousel-next {
+  inset-inline-end: var(--rz-carousel-prev-next-button-inset);
+}
+.rz-carousel-next .rzi {
+  order: 2;
+}
+
+*[dir=rtl] .rz-carousel-prev .rzi,
+*[dir=rtl] .rz-carousel-next .rzi {
+  transform: rotate(180deg);
+}
+
 :root {
   /* Theme Colors */
   --rz-white: #ffffff;
@@ -21093,6 +21233,27 @@ button.rz-colorpicker-trigger .rzi:before {
   --rz-card-border: var(--rz-border-base-500);
   --rz-card-border-radius: var(--rz-border-radius);
   --rz-card-heading-margin-bottom: 0.5rem;
+  /* Carousel */
+  --rz-carousel-pager-button-width: 0.75rem;
+  --rz-carousel-pager-button-height: 0.75rem;
+  --rz-carousel-pager-button-border: none;
+  --rz-carousel-pager-button-border-radius: 50%;
+  --rz-carousel-pager-button-background-color: var(--rz-base);
+  --rz-carousel-pager-button-color: var(--rz-on-base);
+  --rz-carousel-pager-button-hover-border: var(--rz-carousel-pager-button-border);
+  --rz-carousel-pager-button-hover-background-color: var(--rz-base-200);
+  --rz-carousel-pager-button-hover-color: var(--rz-on-base);
+  --rz-carousel-pager-button-active-width: var(--rz-carousel-pager-button-width);
+  --rz-carousel-pager-button-active-height: var(--rz-carousel-pager-button-height);
+  --rz-carousel-pager-button-active-border: none;
+  --rz-carousel-pager-button-active-background-color: var(--rz-base-50);
+  --rz-carousel-pager-button-active-color: var(--rz-on-base-light);
+  --rz-carousel-pager-overlay-opacity: 0.7;
+  --rz-carousel-pager-gap: 0.5rem;
+  --rz-carousel-pager-height: 3rem;
+  --rz-carousel-prev-next-button-border-radius: var(--rz-button-border-radius);
+  --rz-carousel-prev-next-button-inset: 1rem;
+  --rz-carousel-border-radius: var(--rz-card-border-radius);
   /* Chart */
   --rz-chart-axis-color: var(--rz-base-300);
   --rz-chart-axis-label-color: var(--rz-text-secondary-color);
