@@ -15,7 +15,7 @@
 		<PackageReference Include="Radzen.Blazor" Version="7.1.5" />
 		<PackageReference Include="Toolbelt.Blazor.SpeechSynthesis" Version="10.3.1" />
 		<PackageReference Include="WanaKana-net" Version="1.0.0" />
-		<PackageReference Include="WanaKanaSharp" Version="1.0.0" />
+		<PackageReference Include="WanaKanaSharp" Version="0.2.0" />
 	</ItemGroup>
 
 </Project>
