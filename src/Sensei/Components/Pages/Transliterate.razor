@@ -246,7 +246,6 @@
         if (!string.IsNullOrEmpty(e.Value.ToString()))
         {
             _kanji = e.Value.ToString().Trim();
-            var romajiConverter = new WanaKanaSharp.RomajiConverter();
             //WanaKanaSharp.WanaKana.IsKanji(_kanji).ToString();
             _kanjiToRomaji = WanaKana.ToRomaji(_kanji); // WanaKanaSharp.WanaKana.ToRomaji(_kanji); // 
             _kanjiToHiragana = WanaKana.ToHiragana(_kanji); // WanaKanaSharp.WanaKana.ToKana(_kanji); // 
