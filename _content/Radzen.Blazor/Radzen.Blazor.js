@@ -16,12 +16,23 @@ if (!Element.prototype.closest) {
   };
 }
 
+// Suppress "DotNetObjectReference already disposed" promise rejections during component teardown.
+function suppressDisposed(promise) {
+  if (promise && typeof promise.catch === 'function') {
+    promise.catch(function () { });
+  }
+}
+window.addEventListener('unhandledrejection', function (e) {
+  if (e.reason && e.reason.message && e.reason.message.indexOf('DotNetObjectReference') !== -1) {
+    e.preventDefault();
+  }
+});
+
 var resolveCallbacks = [];
 var rejectCallbacks = [];
 var radzenRecognition;
 
 window.Radzen = {
-    selectedNavigationSelector: undefined,
     isRTL: function (el) {
         return el && getComputedStyle(el).direction == 'rtl';
     },
@@ -37,6 +48,26 @@ window.Radzen = {
                 }, delay);
             }
         };
+    },
+    downloadFile: async function (fileName, data, mimeType) {
+        const buffer = typeof data.arrayBuffer === 'function' ? await data.arrayBuffer() : data;
+        const blob = new Blob([buffer], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+
+        URL.revokeObjectURL(url);
+    },
+    cssVariables: function (element, names) {
+        if (!(element instanceof Element) || !Array.isArray(names)) {
+            return null;
+        }
+
+        const style = getComputedStyle(element);
+        return names.map(name => style.getPropertyValue(name).trim() || null);
     },
     mask: function (id, mask, pattern, characterPattern) {
       var el = document.getElementById(id);
@@ -81,6 +112,7 @@ window.Radzen = {
         var handler = function (e) {
             e.stopPropagation();
             e.preventDefault();
+            try {
             ref.invokeMethodAsync('RadzenComponent.RaiseContextMenu',
                 {
                     ClientX: e.clientX,
@@ -94,6 +126,7 @@ window.Radzen = {
                     Button: e.button,
                     Buttons: e.buttons,
                 });
+            } catch { }
             return false;
         };
         Radzen[id + 'contextmenu'] = handler;
@@ -104,7 +137,7 @@ window.Radzen = {
      var el = document.getElementById(id);
      if (el) {
         var handler = function (e) {
-            ref.invokeMethodAsync('RadzenComponent.RaiseMouseEnter');
+            try { suppressDisposed(ref.invokeMethodAsync('RadzenComponent.RaiseMouseEnter')); } catch { }
         };
         Radzen[id + 'mouseenter'] = handler;
         el.addEventListener('mouseenter', handler, false);
@@ -114,7 +147,7 @@ window.Radzen = {
      var el = document.getElementById(id);
      if (el) {
         var handler = function (e) {
-            ref.invokeMethodAsync('RadzenComponent.RaiseMouseLeave');;
+            try { suppressDisposed(ref.invokeMethodAsync('RadzenComponent.RaiseMouseLeave')); } catch { }
         };
         Radzen[id + 'mouseleave'] = handler;
         el.addEventListener('mouseleave', handler, false);
@@ -148,6 +181,453 @@ window.Radzen = {
           : 'margin-left:0px;';
     }
   },
+  ganttSyncScroll: function (ganttId) {
+    if (!ganttId) {
+      return;
+    }
+
+    var root = document.getElementById(ganttId);
+    if (!root) {
+      return;
+    }
+
+    var grid = root.querySelector('.rz-data-grid-data');
+    var timeline = root.querySelector('.rz-gantt-timeline-scroll');
+    if (!grid || !timeline) {
+      return;
+    }
+
+    var header = root.querySelector('.rz-gantt-table thead');
+    if (header) {
+      root.style.setProperty('--rz-gantt-header-height', header.getBoundingClientRect().height + 'px');
+    }
+
+    // Measure timeline group header and set CSS variable so the grid's
+    // thead::before pseudo-row matches it. Also sync overall header height.
+    function syncHeaderHeights() {
+      var gridThead = grid.querySelector('thead');
+      var timelineThead = timeline.querySelector('thead');
+      if (!gridThead || !timelineThead) return;
+
+      var groupRow = timelineThead.querySelector('.rz-gantt-header-group-row');
+      if (groupRow) {
+        root.style.setProperty('--rz-gantt-header-group-height', groupRow.offsetHeight + 'px');
+      } else {
+        root.style.setProperty('--rz-gantt-header-group-height', '0px');
+      }
+
+      var maxH = Math.max(gridThead.offsetHeight, timelineThead.offsetHeight);
+      root.style.setProperty('--rz-gantt-header-height', maxH + 'px');
+    }
+
+    function runSyncAfterLayout() {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(syncHeaderHeights);
+      });
+    }
+
+    runSyncAfterLayout();
+
+    var key = ganttId + '_ganttScrollSync';
+    var state = Radzen[key];
+
+    if (state && state.grid === grid && state.timeline === timeline) {
+      return;
+    }
+
+    if (state) {
+      if (state.grid && state.onGrid) {
+        state.grid.removeEventListener('scroll', state.onGrid);
+      }
+      if (state.timeline && state.onTimeline) {
+        state.timeline.removeEventListener('scroll', state.onTimeline);
+      }
+      if (state.grid && state.onGridWheel) {
+        state.grid.removeEventListener('wheel', state.onGridWheel);
+      }
+    }
+
+    var syncing = false;
+    var onGrid = function () {
+      if (syncing) {
+        return;
+      }
+      syncing = true;
+      timeline.scrollTop = grid.scrollTop;
+      syncing = false;
+    };
+    var onTimeline = function () {
+      if (syncing) {
+        return;
+      }
+      syncing = true;
+      grid.scrollTop = timeline.scrollTop;
+      var histogram = root.querySelector('.rz-gantt-histogram-scroll');
+      if (histogram) {
+        histogram.scrollLeft = timeline.scrollLeft;
+      }
+      syncing = false;
+    };
+
+    // The grid has overflow-y: hidden (no native vertical scrollbar).
+    // Forward vertical mouse-wheel events to the timeline so the user
+    // can still scroll vertically while hovering over the grid.
+    var onGridWheel = function (e) {
+      if (e.shiftKey || e.deltaX) {
+        return;
+      }
+      if (e.deltaY) {
+        timeline.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    };
+
+    grid.addEventListener('scroll', onGrid);
+    timeline.addEventListener('scroll', onTimeline);
+    grid.addEventListener('wheel', onGridWheel, { passive: false });
+
+    var resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(runSyncAfterLayout);
+      resizeObserver.observe(root);
+    }
+
+    Radzen[key] = {
+      grid: grid,
+      timeline: timeline,
+      onGrid: onGrid,
+      onTimeline: onTimeline,
+      onGridWheel: onGridWheel,
+      resizeObserver: resizeObserver
+    };
+
+    timeline.scrollTop = grid.scrollTop;
+  },
+  ganttScrollToFirstEvent: function (ganttId) {
+    if (!ganttId) return false;
+    var root = document.getElementById(ganttId);
+    if (!root) return false;
+    var timeline = root.querySelector('.rz-gantt-timeline-scroll');
+    if (!timeline) return false;
+    var events = timeline.querySelectorAll('.rz-event');
+    if (!events.length) return false;
+
+    var timelineRect = timeline.getBoundingClientRect();
+    var thead = timeline.querySelector('thead');
+    var headerHeight = thead ? thead.offsetHeight : 0;
+
+    var bestTop = Infinity;
+    var bestLeft = Infinity;
+    for (var i = 0; i < events.length; i++) {
+      var rect = events[i].getBoundingClientRect();
+      if (rect.width <= 0) continue;
+      var contentTop = rect.top - timelineRect.top + timeline.scrollTop;
+      var contentLeft = rect.left - timelineRect.left + timeline.scrollLeft;
+      if (contentTop < bestTop || (contentTop === bestTop && contentLeft < bestLeft)) {
+        bestTop = contentTop;
+        bestLeft = contentLeft;
+      }
+    }
+    if (bestTop === Infinity) return false;
+
+    timeline.scrollTop = Math.max(0, bestTop - headerHeight - 4);
+    timeline.scrollLeft = Math.max(0, bestLeft - 40);
+    return true;
+  },
+  ganttSyncScrollDispose: function (ganttId) {
+    if (!ganttId) {
+      return;
+    }
+
+    var key = ganttId + '_ganttScrollSync';
+    var state = Radzen[key];
+    if (!state) {
+      return;
+    }
+
+    if (state.grid && state.onGrid) {
+      state.grid.removeEventListener('scroll', state.onGrid);
+    }
+    if (state.timeline && state.onTimeline) {
+      state.timeline.removeEventListener('scroll', state.onTimeline);
+    }
+    if (state.grid && state.onGridWheel) {
+      state.grid.removeEventListener('wheel', state.onGridWheel);
+    }
+    if (state.resizeObserver) {
+      state.resizeObserver.disconnect();
+    }
+
+    delete Radzen[key];
+  },
+  ganttInitDragResize: function (containerId, dotnetRef, timelineRangeMs, allowDrag, allowResize, rowHeightPx) {
+    var key = containerId + '_ganttDragResize';
+
+    if (Radzen[key]) {
+      Radzen[key].dotnetRef = dotnetRef;
+      Radzen[key].timelineRangeMs = timelineRangeMs;
+      Radzen[key].allowDrag = allowDrag;
+      Radzen[key].allowResize = allowResize;
+      Radzen[key].rowHeightPx = rowHeightPx || 36;
+      return;
+    }
+
+    var root = document.getElementById(containerId);
+    if (!root) return;
+
+    var container = root.querySelector('.rz-gantt-timeline-scroll');
+    if (!container) return;
+
+    var resizeThreshold = 6;
+    var dragThreshold = 3;
+    var drag = null;
+    var justDragged = false;
+
+    function getConfig() {
+      return Radzen[key];
+    }
+
+    function buildLinkPath(x1, x2, y1, y2, rh, linkType) {
+      var offset = 12;
+      var halfRow = rh * 0.5;
+      var exitRight = linkType === 0 || linkType === 2;
+      var enterRight = linkType === 2 || linkType === 3;
+      var exitDir = exitRight ? 1 : -1;
+      var enterDir = enterRight ? 1 : -1;
+      var exitX = x1 + offset * exitDir;
+      var enterX = x2 + offset * enterDir;
+      var canGoStraight = exitRight !== enterRight
+        ? (exitRight ? x2 - x1 > offset * 2 : x1 - x2 > offset * 2)
+        : (exitRight ? exitX < enterX : exitX > enterX);
+
+      if (canGoStraight && y1 !== y2) {
+        var midX = (exitX + enterX) / 2;
+        return 'M' + x1 + ',' + y1 + ' L' + midX + ',' + y1 + ' L' + midX + ',' + y2 + ' L' + x2 + ',' + y2;
+      }
+      var midY = y2 > y1 ? y1 + halfRow : (y2 < y1 ? y1 - halfRow : y1 + halfRow);
+      return 'M' + x1 + ',' + y1 + ' L' + exitX + ',' + y1 + ' L' + exitX + ',' + midY + ' L' + enterX + ',' + midY + ' L' + enterX + ',' + y2 + ' L' + x2 + ',' + y2;
+    }
+
+    function updateConnectedPaths() {
+      if (!drag) return;
+      var svg = container.querySelector('.rz-gantt-links');
+      if (!svg) return;
+
+      var config = getConfig();
+      var rh = config.rowHeightPx;
+      var svgWidth = svg.getBoundingClientRect().width;
+      var idx = drag.index;
+
+      var paths = svg.querySelectorAll('path[data-from-index="' + idx + '"], path[data-to-index="' + idx + '"]');
+      for (var i = 0; i < paths.length; i++) {
+        var path = paths[i];
+        var fromIdx = path.dataset.fromIndex;
+        var toIdx = path.dataset.toIndex;
+        var linkType = parseInt(path.dataset.linkType, 10) || 0;
+
+        var fromBar = container.querySelector('[data-index="' + fromIdx + '"]');
+        var toBar = container.querySelector('[data-index="' + toIdx + '"]');
+        if (!fromBar || !toBar) continue;
+
+        var fromRow = parseInt(fromBar.dataset.row, 10);
+        var toRow = parseInt(toBar.dataset.row, 10);
+
+        var fromLeft = parseFloat(fromBar.style.getPropertyValue('inset-inline-start')) || 0;
+        var fromWidth = parseFloat(fromBar.style.width) || 0;
+        var toLeft = parseFloat(toBar.style.getPropertyValue('inset-inline-start')) || 0;
+        var toWidth = parseFloat(toBar.style.width) || 0;
+        var fromIsMilestone = fromBar.classList.contains('rz-gantt-milestone');
+        var toIsMilestone = toBar.classList.contains('rz-gantt-milestone');
+
+        var x1, x2;
+        if (linkType === 1) { x1 = fromLeft; x2 = toLeft; }
+        else if (linkType === 2) { x1 = fromIsMilestone ? fromLeft : fromLeft + fromWidth; x2 = toIsMilestone ? toLeft : toLeft + toWidth; }
+        else if (linkType === 3) { x1 = fromLeft; x2 = toIsMilestone ? toLeft : toLeft + toWidth; }
+        else { x1 = fromIsMilestone ? fromLeft : fromLeft + fromWidth; x2 = toLeft; }
+
+        var x1px = (x1 / 100) * svgWidth;
+        var x2px = (x2 / 100) * svgWidth;
+        var y1 = (fromRow + 0.5) * rh;
+        var y2 = (toRow + 0.5) * rh;
+
+        path.setAttribute('d', buildLinkPath(x1px, x2px, y1, y2, rh, linkType));
+      }
+    }
+
+    function onMouseDown(e) {
+      var config = getConfig();
+      if (!config) return;
+
+      var bar = e.target.closest('.rz-gantt-bar, .rz-gantt-milestone');
+      if (!bar || e.button !== 0 || !bar.dataset.index) return;
+
+      var isMilestone = bar.classList.contains('rz-gantt-milestone');
+      var barRect = bar.getBoundingClientRect();
+      var offsetX = e.clientX - barRect.left;
+
+      var mode;
+      if (isMilestone) {
+        if (!config.allowDrag) return;
+        mode = 'move';
+      } else if (config.allowResize && offsetX <= resizeThreshold) {
+        mode = 'resize-start';
+      } else if (config.allowResize && barRect.width - offsetX <= resizeThreshold) {
+        mode = 'resize-end';
+      } else if (config.allowDrag) {
+        mode = 'move';
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+
+      var containerEl = bar.closest('.rz-gantt-row-container');
+      var containerWidth = containerEl ? containerEl.getBoundingClientRect().width : 1;
+
+      drag = {
+        bar: bar,
+        mode: mode,
+        startClientX: e.clientX,
+        containerWidth: containerWidth,
+        originalLeft: parseFloat(bar.style.getPropertyValue('inset-inline-start')) || 0,
+        originalWidth: parseFloat(bar.style.width) || 0,
+        offsetStart: parseFloat(bar.dataset.offsetStart) || 0,
+        offsetEnd: parseFloat(bar.dataset.offsetEnd) || 0,
+        index: parseInt(bar.dataset.index, 10),
+        isMilestone: isMilestone,
+        hasMoved: false
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function onMouseMove(e) {
+      if (!drag) return;
+
+      var deltaX = e.clientX - drag.startClientX;
+      if (!drag.hasMoved && Math.abs(deltaX) < dragThreshold) return;
+      drag.hasMoved = true;
+
+      var percentDelta = (deltaX / drag.containerWidth) * 100;
+
+      if (drag.mode === 'move') {
+        drag.bar.style.setProperty('inset-inline-start', (drag.originalLeft + percentDelta) + '%');
+      } else if (drag.mode === 'resize-start') {
+        var newWidth = drag.originalWidth - percentDelta;
+        if (newWidth > 0.1) {
+          drag.bar.style.setProperty('inset-inline-start', (drag.originalLeft + percentDelta) + '%');
+          drag.bar.style.width = newWidth + '%';
+        }
+      } else if (drag.mode === 'resize-end') {
+        var newWidth = drag.originalWidth + percentDelta;
+        if (newWidth > 0.1) {
+          drag.bar.style.width = newWidth + '%';
+        }
+      }
+
+      drag.bar.style.zIndex = '10';
+      drag.bar.style.opacity = '0.85';
+      document.body.style.cursor = drag.mode === 'move' ? 'grabbing' : 'ew-resize';
+
+      updateConnectedPaths();
+    }
+
+    function onMouseUp(e) {
+      if (!drag) return;
+
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      drag.bar.style.zIndex = '';
+      drag.bar.style.opacity = '';
+      document.body.style.cursor = '';
+
+      if (drag.hasMoved) {
+        justDragged = true;
+
+        var deltaX = e.clientX - drag.startClientX;
+        var percentDelta = (deltaX / drag.containerWidth) * 100;
+        var config = getConfig();
+        var msPerPercent = config.timelineRangeMs / 100;
+        var deltaMs = percentDelta * msPerPercent;
+
+        var newStartMs, newEndMs;
+        if (drag.mode === 'move') {
+          newStartMs = drag.offsetStart + deltaMs;
+          newEndMs = drag.offsetEnd + deltaMs;
+        } else if (drag.mode === 'resize-start') {
+          newStartMs = drag.offsetStart + deltaMs;
+          newEndMs = drag.offsetEnd;
+        } else {
+          newStartMs = drag.offsetStart;
+          newEndMs = drag.offsetEnd + deltaMs;
+        }
+
+        var eventType = drag.mode === 'move' ? 'move' : 'resize';
+        try { suppressDisposed(config.dotnetRef.invokeMethodAsync('OnGanttBarInteractionEnd', drag.index, eventType, newStartMs, newEndMs)); } catch { }
+      }
+
+      drag = null;
+    }
+
+    function onMouseMoveHover(e) {
+      if (drag) return;
+      var config = getConfig();
+      if (!config) return;
+
+      var bar = e.target.closest('.rz-gantt-bar, .rz-gantt-milestone');
+      if (!bar || !bar.dataset.index) return;
+
+      if (bar.classList.contains('rz-gantt-milestone')) {
+        bar.style.cursor = config.allowDrag ? 'grab' : '';
+        return;
+      }
+
+      var barRect = bar.getBoundingClientRect();
+      var offsetX = e.clientX - barRect.left;
+
+      if (config.allowResize && (offsetX <= resizeThreshold || barRect.width - offsetX <= resizeThreshold)) {
+        bar.style.cursor = 'ew-resize';
+      } else if (config.allowDrag) {
+        bar.style.cursor = 'grab';
+      }
+    }
+
+    function onClickCapture(e) {
+      if (justDragged) {
+        e.stopPropagation();
+        e.preventDefault();
+        justDragged = false;
+      }
+    }
+
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mousemove', onMouseMoveHover);
+    container.addEventListener('click', onClickCapture, true);
+
+    Radzen[key] = {
+      container: container,
+      dotnetRef: dotnetRef,
+      timelineRangeMs: timelineRangeMs,
+      allowDrag: allowDrag,
+      allowResize: allowResize,
+      rowHeightPx: rowHeightPx || 36,
+      onMouseDown: onMouseDown,
+      onMouseMoveHover: onMouseMoveHover,
+      onClickCapture: onClickCapture
+    };
+  },
+  ganttDisposeDragResize: function (containerId) {
+    var key = containerId + '_ganttDragResize';
+    var config = Radzen[key];
+    if (!config) return;
+
+    config.container.removeEventListener('mousedown', config.onMouseDown);
+    config.container.removeEventListener('mousemove', config.onMouseMoveHover);
+    config.container.removeEventListener('click', config.onClickCapture, true);
+    delete Radzen[key];
+  },
   preventDefaultAndStopPropagation: function (e) {
     e.preventDefault();
     e.stopPropagation();
@@ -163,28 +643,456 @@ window.Radzen = {
        el.addEventListener('keydown', preventDefault, false);
     }
   },
+  createTabsOverflow: function (tablist, instance, popupId, moreButtonId) {
+    if (!tablist || !instance) return { dispose: function () { } };
+
+    var vertical = tablist.getAttribute('aria-orientation') === 'vertical';
+    var moreButton = document.getElementById(moreButtonId);
+    var more = moreButton ? moreButton.parentElement : null;
+    var popup = document.getElementById(popupId);
+    var last = null;
+    var frame = null;
+
+    function outerSize(el) {
+      var rect = el.getBoundingClientRect();
+      var style = getComputedStyle(el);
+      return vertical
+        ? rect.height + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0)
+        : rect.width + (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0);
+    }
+
+    function measure() {
+      frame = null;
+      if (!tablist.isConnected) return;
+
+      var style = getComputedStyle(tablist);
+      var gap = parseFloat(vertical ? style.rowGap : style.columnGap) || 0;
+      var available = vertical
+        ? tablist.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0)
+        : tablist.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+      var moreSize = more ? outerSize(more) : 0;
+      if (more && !more.classList.contains('rz-tabview-collapsed')) {
+        available += moreSize;
+      }
+      var items = [];
+
+      for (var i = 0; i < tablist.children.length; i++) {
+        var li = tablist.children[i];
+        var tab = li.querySelector('[role="tab"]');
+        var match = tab && tab.id ? /-tabpanel-(\d+)-label$/.exec(tab.id) : null;
+        if (!match) continue;
+        items.push({ index: parseInt(match[1], 10), size: outerSize(li) + gap, order: parseFloat(getComputedStyle(li).order) || 0, position: i });
+      }
+
+      items.sort(function (a, b) { return a.order - b.order || a.position - b.position; });
+
+      var indexes = [];
+      var sizes = [];
+      for (var j = 0; j < items.length; j++) {
+        indexes.push(items[j].index);
+        sizes.push(Math.round(items[j].size * 100) / 100);
+      }
+
+      available = Math.round((available + gap) * 100) / 100;
+      moreSize = Math.round((moreSize + gap) * 100) / 100;
+
+      var key = available + '|' + moreSize + '|' + indexes.join(',') + '|' + sizes.join(',');
+      if (key === last) return;
+      last = key;
+
+      try { suppressDisposed(instance.invokeMethodAsync('OnTabsOverflow', available, moreSize, indexes, sizes)); } catch (e) { }
+    }
+
+    function schedule() {
+      if (frame === null) frame = requestAnimationFrame(measure);
+    }
+
+    var resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null;
+
+    function observe() {
+      if (!resizeObserver) return;
+      resizeObserver.disconnect();
+      resizeObserver.observe(tablist);
+      if (more) resizeObserver.observe(more);
+      for (var i = 0; i < tablist.children.length; i++) {
+        resizeObserver.observe(tablist.children[i]);
+      }
+    }
+
+    var mutationObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(function () { observe(); schedule(); }) : null;
+    if (mutationObserver) mutationObserver.observe(tablist, { childList: true });
+
+    function onPopupKeydown(e) {
+      if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Esc') {
+        Radzen.closePopup(popupId, instance, 'OnMorePopupClose', null, true);
+        if (moreButton) moreButton.focus();
+        if (e.key !== 'Tab') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        return;
+      }
+
+      var items = Array.prototype.slice.call(popup.querySelectorAll('[role="menuitem"]:not([disabled])'));
+      if (!items.length) return;
+      var current = items.indexOf(document.activeElement);
+      var next = -1;
+
+      if (e.key === 'ArrowDown') {
+        next = current < items.length - 1 ? current + 1 : 0;
+      } else if (e.key === 'ArrowUp') {
+        next = current > 0 ? current - 1 : items.length - 1;
+      } else if (e.key === 'Home') {
+        next = 0;
+      } else if (e.key === 'End') {
+        next = items.length - 1;
+      }
+
+      if (next >= 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        items[next].focus();
+      }
+    }
+
+    function onMoreButtonKeydown(e) {
+      if (!popup || popup.style.display !== 'block') return;
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        e.stopPropagation();
+        Radzen.closePopup(popupId, instance, 'OnMorePopupClose', null, true);
+      } else if (e.key === 'ArrowDown') {
+        var first = popup.querySelector('[role="menuitem"]:not([disabled])');
+        if (first) {
+          e.preventDefault();
+          e.stopPropagation();
+          first.focus();
+        }
+      }
+    }
+
+    function onPopupFocusIn(e) {
+      var item = e.target && e.target.closest ? e.target.closest('[role="menuitem"]') : null;
+      if (!item) return;
+      var items = popup.querySelectorAll('[role="menuitem"]');
+      for (var i = 0; i < items.length; i++) {
+        items[i].setAttribute('tabindex', items[i] === item ? '0' : '-1');
+      }
+    }
+
+    if (popup) {
+      popup.addEventListener('keydown', onPopupKeydown);
+      popup.addEventListener('focusin', onPopupFocusIn);
+    }
+    if (moreButton) moreButton.addEventListener('keydown', onMoreButtonKeydown);
+
+    observe();
+    window.addEventListener('resize', schedule);
+    schedule();
+
+    return {
+      dispose: function () {
+        if (frame !== null) {
+          cancelAnimationFrame(frame);
+          frame = null;
+        }
+        if (resizeObserver) resizeObserver.disconnect();
+        if (mutationObserver) mutationObserver.disconnect();
+        window.removeEventListener('resize', schedule);
+        if (popup) {
+          popup.removeEventListener('keydown', onPopupKeydown);
+          popup.removeEventListener('focusin', onPopupFocusIn);
+        }
+        if (moreButton) moreButton.removeEventListener('keydown', onMoreButtonKeydown);
+      }
+    };
+  },
+  createTabsScroll: function (tablist) {
+    if (!tablist) return { dispose: function () { } };
+
+    var vertical = tablist.getAttribute('aria-orientation') === 'vertical';
+    var root = tablist.parentElement;
+    var prev = root ? root.querySelector(':scope > .rz-tabview-scroll-prev') : null;
+    var next = root ? root.querySelector(':scope > .rz-tabview-scroll-next') : null;
+    var frame = null;
+    var revealFrame = null;
+    var lastActive = null;
+    var userScrolled = false;
+    var revealForce = false;
+
+    function isRTL() {
+      return !vertical && getComputedStyle(tablist).direction === 'rtl';
+    }
+
+    function tabs() {
+      return Array.prototype.filter.call(tablist.children, function (li) {
+        return li.querySelector('[role="tab"]') && getComputedStyle(li).display !== 'none';
+      });
+    }
+
+    function bounds() {
+      var rect = tablist.getBoundingClientRect();
+      return vertical ? { start: rect.top, end: rect.bottom } : { start: rect.left, end: rect.right };
+    }
+
+    function update() {
+      frame = null;
+      if (!tablist.isConnected) return;
+      var overflow = vertical ? tablist.scrollHeight - tablist.clientHeight : tablist.scrollWidth - tablist.clientWidth;
+      var scrollable = overflow > 1;
+      var pos = Math.abs(vertical ? tablist.scrollTop : tablist.scrollLeft);
+      var atStart = pos <= 1;
+      var atEnd = pos >= overflow - 1;
+      if (prev) {
+        prev.hidden = !scrollable;
+        prev.setAttribute('aria-disabled', atStart ? 'true' : 'false');
+      }
+      if (next) {
+        next.hidden = !scrollable;
+        next.setAttribute('aria-disabled', atEnd ? 'true' : 'false');
+      }
+    }
+
+    function schedule() {
+      if (frame === null) frame = requestAnimationFrame(update);
+    }
+
+    function reveal(li, behavior) {
+      if (!li) return;
+      var b = bounds();
+      var r = li.getBoundingClientRect();
+      var itemStart = vertical ? r.top : r.left;
+      var itemEnd = vertical ? r.bottom : r.right;
+      var delta = itemStart < b.start ? itemStart - b.start : itemEnd > b.end ? itemEnd - b.end : 0;
+      if (Math.abs(delta) < 1) return;
+      tablist.scrollBy(vertical ? { top: delta, behavior: behavior } : { left: delta, behavior: behavior });
+    }
+
+    function revealActive(behavior, force) {
+      revealFrame = null;
+      var li = tablist.querySelector('li.rz-state-focused') || tablist.querySelector('li.rz-tabview-selected');
+      if (li !== lastActive) {
+        lastActive = li;
+        userScrolled = false;
+      } else if (!force) {
+        return;
+      }
+      if (!userScrolled) reveal(li, behavior);
+    }
+
+    function scheduleReveal(force) {
+      revealForce = revealForce || !!force;
+      if (revealFrame === null) {
+        revealFrame = requestAnimationFrame(function () {
+          var f = revealForce;
+          revealForce = false;
+          revealActive(f ? 'auto' : 'smooth', f);
+        });
+      }
+    }
+
+    function onUserScroll() {
+      userScrolled = true;
+    }
+
+    function step(direction) {
+      var b = bounds();
+      var items = tabs();
+      var visual = !vertical && isRTL() ? items.slice().reverse() : items;
+      var target = null;
+      if (direction > 0) {
+        for (var i = 0; i < visual.length; i++) {
+          var r = visual[i].getBoundingClientRect();
+          if ((vertical ? r.bottom : r.right) > b.end + 1) { target = visual[i]; break; }
+        }
+      } else {
+        for (var j = visual.length - 1; j >= 0; j--) {
+          var q = visual[j].getBoundingClientRect();
+          if ((vertical ? q.top : q.left) < b.start - 1) { target = visual[j]; break; }
+        }
+      }
+      if (target) {
+        reveal(target, 'smooth');
+      }
+    }
+
+    function onPrevClick(e) { e.preventDefault(); userScrolled = true; step(isRTL() ? 1 : -1); }
+    function onNextClick(e) { e.preventDefault(); userScrolled = true; step(isRTL() ? -1 : 1); }
+    function onMousedown(e) { e.preventDefault(); }
+
+    if (prev) {
+      prev.addEventListener('click', onPrevClick);
+      prev.addEventListener('mousedown', onMousedown);
+    }
+    if (next) {
+      next.addEventListener('click', onNextClick);
+      next.addEventListener('mousedown', onMousedown);
+    }
+
+    function onResize() {
+      schedule();
+      scheduleReveal(true);
+    }
+
+    var resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
+
+    function observe() {
+      if (!resizeObserver) return;
+      resizeObserver.disconnect();
+      resizeObserver.observe(tablist);
+      for (var i = 0; i < tablist.children.length; i++) {
+        resizeObserver.observe(tablist.children[i]);
+      }
+    }
+
+    var mutationObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(function (records) {
+      var structural = false;
+      var tabChanged = false;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i].target === tablist) {
+          if (records[i].type === 'childList') structural = true;
+          continue;
+        }
+        tabChanged = true;
+      }
+      if (structural) observe();
+      if (structural || tabChanged) schedule();
+      if (tabChanged) scheduleReveal(false);
+    }) : null;
+    if (mutationObserver) mutationObserver.observe(tablist, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'aria-selected'] });
+
+    tablist.addEventListener('scroll', schedule, { passive: true });
+    tablist.addEventListener('wheel', onUserScroll, { passive: true });
+    tablist.addEventListener('touchstart', onUserScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    observe();
+    update();
+    revealActive('auto', true);
+
+    return {
+      dispose: function () {
+        if (frame !== null) { cancelAnimationFrame(frame); frame = null; }
+        if (revealFrame !== null) { cancelAnimationFrame(revealFrame); revealFrame = null; }
+        if (resizeObserver) resizeObserver.disconnect();
+        if (mutationObserver) mutationObserver.disconnect();
+        tablist.removeEventListener('scroll', schedule);
+        tablist.removeEventListener('wheel', onUserScroll);
+        tablist.removeEventListener('touchstart', onUserScroll);
+        window.removeEventListener('resize', onResize);
+        if (prev) {
+          prev.removeEventListener('click', onPrevClick);
+          prev.removeEventListener('mousedown', onMousedown);
+        }
+        if (next) {
+          next.removeEventListener('click', onNextClick);
+          next.removeEventListener('mousedown', onMousedown);
+        }
+      }
+    };
+  },
   selectTab: function (id, index) {
     var el = document.getElementById(id);
     if (el && el.parentNode && el.parentNode.previousElementSibling) {
+        var tablist = el.parentNode.previousElementSibling;
+        if (tablist.getAttribute('role') !== 'tablist' && el.parentNode.parentNode) {
+            tablist = el.parentNode.parentNode.querySelector('[role="tablist"]') || tablist;
+        }
         var count = el.parentNode.children.length;
         for (var i = 0; i < count; i++) {
             var content = el.parentNode.children[i];
             if (content) {
                 content.style.display = i == index ? '' : 'none';
+                content.setAttribute('aria-hidden', i == index ? 'false' : 'true');
             }
-            var header = el.parentNode.previousElementSibling.children[i];
+            var header = tablist.children[i];
             if (header) {
+                var btn = header.querySelector('[role="tab"]') || header;
                 if (i == index) {
                     header.classList.add('rz-tabview-selected');
                     header.classList.add('rz-state-focused');
+                    btn.setAttribute('aria-selected', 'true');
                 }
                 else {
                     header.classList.remove('rz-tabview-selected');
                     header.classList.remove('rz-state-focused');
+                    btn.setAttribute('aria-selected', 'false');
                 }
             }
         }
+        if (tablist.getAttribute && tablist.getAttribute('role') === 'tablist') {
+            var activeBtn = tablist.children[index] && (tablist.children[index].querySelector('[role="tab"]') || tablist.children[index]);
+            if (activeBtn && activeBtn.id) {
+                tablist.setAttribute('aria-activedescendant', activeBtn.id);
+            }
+        }
     }
+  },
+  createAccordion: function (el, multiple) {
+    function getItems() {
+        var headers = [];
+        var expanders = [];
+        for (var i = 0; i < el.children.length; i++) {
+            var child = el.children[i];
+            if (child.classList.contains('rz-accordion-header')) {
+                headers.push(child);
+            } else if (child.classList.contains('rz-expander')) {
+                expanders.push(child);
+            }
+        }
+        return { headers: headers, expanders: expanders };
+    }
+
+    function toggleItem(index, expanded) {
+        var items = getItems();
+        if (index < 0 || index >= items.headers.length) return;
+
+        if (!multiple) {
+            for (var i = 0; i < items.headers.length; i++) {
+                if (i !== index) {
+                    var btn = items.headers[i].querySelector('button');
+                    var icon = items.headers[i].querySelector('.rz-accordion-toggle-icon');
+                    if (btn) btn.setAttribute('aria-expanded', 'false');
+                    if (icon) {
+                        icon.classList.remove('rz-state-expanded');
+                        icon.classList.add('rz-state-collapsed');
+                    }
+                    items.expanders[i].classList.remove('rz-state-expanded');
+                    items.expanders[i].classList.add('rz-state-collapsed');
+                    items.expanders[i].setAttribute('aria-hidden', 'true');
+                }
+            }
+        }
+
+        var button = items.headers[index].querySelector('button');
+        var toggleIcon = items.headers[index].querySelector('.rz-accordion-toggle-icon');
+        if (button) button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        if (toggleIcon) {
+            toggleIcon.classList.remove(expanded ? 'rz-state-collapsed' : 'rz-state-expanded');
+            toggleIcon.classList.add(expanded ? 'rz-state-expanded' : 'rz-state-collapsed');
+        }
+        items.expanders[index].classList.remove(expanded ? 'rz-state-collapsed' : 'rz-state-expanded');
+        items.expanders[index].classList.add(expanded ? 'rz-state-expanded' : 'rz-state-collapsed');
+        items.expanders[index].setAttribute('aria-hidden', expanded ? 'false' : 'true');
+    }
+
+    function onKeyDown(e) {
+        var key = e.code || e.key;
+        if (key !== 'ArrowUp' && key !== 'ArrowDown' && key !== 'Home' && key !== 'End') {
+            return;
+        }
+        var target = e.target;
+        if (target && target.closest && target.closest('.rz-accordion-header')) {
+            e.preventDefault();
+        }
+    }
+
+    el.addEventListener('keydown', onKeyDown);
+
+    return {
+        toggle: function (index, expanded) { toggleItem(index, expanded); },
+        setMultiple: function (value) { multiple = value; },
+        dispose: function () { el.removeEventListener('keydown', onKeyDown); }
+    };
   },
   loadGoogleMaps: function (defaultView, apiKey, resolve, reject, language) {
     resolveCallbacks.push(resolve);
@@ -243,13 +1151,51 @@ window.Radzen = {
       });
 
       Radzen[id].instance.addListener('click', function (e) {
-        Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnMapClick', {
+        try { Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnMapClick', {
           Position: {Lat: e.latLng.lat(), Lng: e.latLng.lng()}
-        });
+        }); } catch { }
+      });
+
+      var lastBounds;
+
+      Radzen[id].instance.addListener('idle', function () {
+        var map = Radzen[id] && Radzen[id].instance;
+        var bounds = map && map.getBounds();
+
+        if (!bounds) {
+          return;
+        }
+
+        var key = bounds.toUrlValue() + '|' + map.getZoom();
+
+        if (key === lastBounds) {
+          return;
+        }
+
+        lastBounds = key;
+
+        var northEast = bounds.getNorthEast();
+        var southWest = bounds.getSouthWest();
+        var mapCenter = map.getCenter();
+
+        try { Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnBoundsChanged', {
+          NorthEast: {Lat: northEast.lat(), Lng: northEast.lng()},
+          SouthWest: {Lat: southWest.lat(), Lng: southWest.lng()},
+          Center: {Lat: mapCenter.lat(), Lng: mapCenter.lng()},
+          Zoom: map.getZoom()
+        }); } catch { }
       });
 
       Radzen.updateMap(id, apiKey, zoom, center, markers, options, fitBoundsToMarkersOnUpdate, language);
     });
+
+    return {
+      dispose: function () {
+        if (Radzen[id] && Radzen[id].instance) {
+          delete Radzen[id].instance;
+        }
+      }
+    };
   },
   updateMap: function (id, apiKey, zoom, center, markers, options, fitBoundsToMarkersOnUpdate, language) {
     var api = function () {
@@ -291,11 +1237,11 @@ window.Radzen = {
                     });
 
                     marker.addListener('click', function (e) {
-                        Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnMarkerClick', {
+                        try { Radzen[id].invokeMethodAsync('RadzenGoogleMap.OnMarkerClick', {
                             Title: marker.title,
                             Label: marker.content.innerText,
                             Position: marker.position
-                        });
+                        }); } catch { }
                     });
 
                     marker.setMap(Radzen[id].instance);
@@ -324,11 +1270,6 @@ window.Radzen = {
         }
     });
   },
-  destroyMap: function (id) {
-    if (Radzen[id].instance) {
-      delete Radzen[id].instance;
-    }
-  },
  focusSecurityCode: function (el) {
     if (!el) return;
     var firstInput = el.querySelector('.rz-security-code-input');
@@ -336,60 +1277,42 @@ window.Radzen = {
         setTimeout(function () { firstInput.focus() }, 500);
     }
  },
-  destroySecurityCode: function (id, el) {
-    if (!Radzen[id]) return;
-
-    var inputs = el.getElementsByTagName('input');
-
-    if (Radzen[id].keyPress && Radzen[id].keyDown && Radzen[id].paste) {
-        var isAndroid = navigator.userAgent.match(/Android/i);
-        for (var i = 0; i < inputs.length; i++) {
-            inputs[i].removeEventListener(isAndroid ? 'textInput' : 'keypress', Radzen[id].keyPress);
-            inputs[i].removeEventListener('keydown', Radzen[id].keyDown);
-            inputs[i].removeEventListener('paste', Radzen[id].paste);
-        }
-        delete Radzen[id].keyPress;
-        delete Radzen[id].keyDown;
-        delete Radzen[id].paste;
-    }
-
-    Radzen[id] = null;
-  },
   createSecurityCode: function (id, ref, el, isNumber) {
-      if (!el || !ref) return;
+      if (!el || !ref) return { dispose: function() {} };
 
       var hidden = el.querySelector('input[type="hidden"]');
 
-      Radzen[id] = {};
+      var state = {};
+      Radzen[id] = state;
 
-      Radzen[id].inputs = [...el.querySelectorAll('.rz-security-code-input')];
+      state.inputs = [...el.querySelectorAll('.rz-security-code-input')];
 
       var isAndroid = navigator.userAgent.match(/Android/i);
 
-      Radzen[id].paste = function (e) {
+      state.paste = function (e) {
           if (e.clipboardData) {
               var value = e.clipboardData.getData('text');
 
               if (value) {
-                  for (var i = 0; i < Math.min(value.length, Radzen[id].inputs.length); i++) {
+                  for (var i = 0; i < Math.min(value.length, state.inputs.length); i++) {
                       if (isNumber && isNaN(+value[i])) {
                           continue;
                       }
-                      Radzen[id].inputs[i].value = value[i];
+                      state.inputs[i].value = value[i];
                   }
 
-                  var code = Radzen[id].inputs.map(i => i.value).join('').trim();
+                  var code = state.inputs.map(i => i.value).join('').trim();
                   hidden.value = code;
 
-                  ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', code);
+                  try { suppressDisposed(ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', code)); } catch { }
 
-                  Radzen[id].inputs[Radzen[id].inputs.length - 1].focus();
+                  state.inputs[state.inputs.length - 1].focus();
               }
 
               e.preventDefault();
           }
       }
-      Radzen[id].keyPress = function (e) {
+      state.keyPress = function (e) {
           var keyCode = e.data ? e.data.charCodeAt(0) : e.which;
           var ch = e.data || String.fromCharCode(e.which);
 
@@ -418,39 +1341,327 @@ window.Radzen = {
 
           e.currentTarget.value = ch;
 
-          var value = Radzen[id].inputs.map(i => i.value).join('').trim();
+          var value = state.inputs.map(i => i.value).join('').trim();
           hidden.value = value;
 
-          ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value);
+          try { suppressDisposed(ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value)); } catch { }
 
-          var index = Radzen[id].inputs.indexOf(e.currentTarget);
-          if (index < Radzen[id].inputs.length - 1) {
-              Radzen[id].inputs[index + 1].focus();
+          var index = state.inputs.indexOf(e.currentTarget);
+          if (index < state.inputs.length - 1) {
+              state.inputs[index + 1].focus();
           }
       }
 
-      Radzen[id].keyDown = function (e) {
+      state.keyDown = function (e) {
           var keyCode = e.which || e.keyCode;
           if (keyCode == 8) {
               e.currentTarget.value = '';
 
-              var value = Radzen[id].inputs.map(i => i.value).join('').trim();
+              var value = state.inputs.map(i => i.value).join('').trim();
               hidden.value = value;
 
-              ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value);
+              try { suppressDisposed(ref.invokeMethodAsync('RadzenSecurityCode.OnValueChange', value)); } catch { }
 
-              var index = Radzen[id].inputs.indexOf(e.currentTarget);
+              var index = state.inputs.indexOf(e.currentTarget);
               if (index > 0) {
-                  Radzen[id].inputs[index - 1].focus();
+                  state.inputs[index - 1].focus();
               }
           }
       }
 
-      for (var i = 0; i < Radzen[id].inputs.length; i++) {
-          Radzen[id].inputs[i].addEventListener(isAndroid ? 'textInput' : 'keypress', Radzen[id].keyPress);
-          Radzen[id].inputs[i].addEventListener('keydown', Radzen[id].keyDown);
-          Radzen[id].inputs[i].addEventListener('paste', Radzen[id].paste);
+      for (var i = 0; i < state.inputs.length; i++) {
+          state.inputs[i].addEventListener(isAndroid ? 'textInput' : 'keypress', state.keyPress);
+          state.inputs[i].addEventListener('keydown', state.keyDown);
+          state.inputs[i].addEventListener('paste', state.paste);
       }
+
+      return {
+          dispose: function () {
+              for (var i = 0; i < state.inputs.length; i++) {
+                  state.inputs[i].removeEventListener(isAndroid ? 'textInput' : 'keypress', state.keyPress);
+                  state.inputs[i].removeEventListener('keydown', state.keyDown);
+                  state.inputs[i].removeEventListener('paste', state.paste);
+              }
+
+              if (Radzen[id] === state) {
+                  Radzen[id] = null;
+              }
+          }
+      };
+  },
+  createVirtualKeyboard: function (id, el) {
+      if (!el) return;
+
+      var panel = el.querySelector('.rz-virtual-keyboard-panel');
+      if (!panel) return;
+
+      var state = Radzen[id] = { input: null, shift: false, closeTimeout: null };
+
+      var isInline = function () { return panel.classList.contains('rz-virtual-keyboard-inline'); };
+      var isAuto = function () { return panel.classList.contains('rz-virtual-keyboard-auto'); };
+
+      var isEditable = function (target) {
+          if (!target || target.disabled || target.readOnly) return false;
+          if (target.tagName == 'TEXTAREA') return true;
+          if (target.tagName != 'INPUT') return false;
+          return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color', 'hidden', 'image'].includes((target.type || 'text').toLowerCase());
+      };
+
+      var setValue = function (input, value, caret) {
+          var proto = input.tagName == 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+          var descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+          if (descriptor && descriptor.set) {
+              descriptor.set.call(input, value);
+          } else {
+              input.value = value;
+          }
+          if (caret != null) {
+              try { input.setSelectionRange(caret, caret); } catch { }
+          }
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      var selection = function (input) {
+          var start = null;
+          var end = null;
+          try { start = input.selectionStart; end = input.selectionEnd; } catch { }
+          if (start == null || end == null) {
+              start = end = input.value.length;
+          }
+          return { start: start, end: end };
+      };
+
+      var insert = function (text) {
+          var input = state.input;
+          var range = selection(input);
+          var value = input.value.slice(0, range.start) + text + input.value.slice(range.end);
+          if (input.maxLength > 0 && value.length > input.maxLength) return;
+          setValue(input, value, range.start + text.length);
+      };
+
+      var backspace = function () {
+          var input = state.input;
+          var range = selection(input);
+          if (range.start == range.end) {
+              if (range.start == 0) return;
+              range.start--;
+          }
+          setValue(input, input.value.slice(0, range.start) + input.value.slice(range.end), range.start);
+      };
+
+      var commit = function (input) {
+          if (input && state.value != null && input.value !== state.value) {
+              state.value = input.value;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+      };
+
+      var enter = function () {
+          var input = state.input;
+          if (input.tagName == 'TEXTAREA') {
+              insert('\n');
+              return;
+          }
+          commit(input);
+          ['keydown', 'keypress', 'keyup'].forEach(function (type) {
+              input.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+          });
+      };
+
+      var toggleShift = function () {
+          state.shift = !state.shift;
+          panel.classList.toggle('rz-virtual-keyboard-shift-active', state.shift);
+          panel.querySelectorAll('[data-vk-action="shift"]').forEach(function (key) {
+              key.setAttribute('aria-pressed', state.shift);
+          });
+      };
+
+      var reposition = function () {
+          if (!state.input || !isAuto()) return;
+          var rect = state.input.getBoundingClientRect();
+          panel.style.left = '0px';
+          panel.style.top = '0px';
+          var panelRect = panel.getBoundingClientRect();
+          var left = Radzen.isRTL(panel) ? rect.right - panelRect.width : rect.left;
+          left = Math.max(0, Math.min(left, window.innerWidth - panelRect.width));
+          var top = rect.bottom + 4;
+          if (top + panelRect.height > window.innerHeight && rect.top > panelRect.height + 4) {
+              top = rect.top - panelRect.height - 4;
+          }
+          top = Math.max(0, Math.min(top, window.innerHeight - panelRect.height));
+          panel.style.left = left + 'px';
+          panel.style.top = top + 'px';
+      };
+
+      var restore = function () {
+          if (panel.parentNode === document.body) {
+              el.appendChild(panel);
+          }
+      };
+
+      var open = function (input) {
+          state.input = input;
+          state.value = input.value;
+          if (isInline()) return;
+          if (panel.parentNode !== document.body) {
+              document.body.appendChild(panel);
+          }
+          panel.style.display = 'block';
+          if (isAuto()) {
+              reposition();
+              window.addEventListener('resize', reposition);
+              document.addEventListener('scroll', reposition, true);
+          } else {
+              panel.style.left = '';
+              panel.style.top = '';
+              var panelRect = panel.getBoundingClientRect();
+              var rect = input.getBoundingClientRect();
+              if (rect.bottom > panelRect.top && rect.top < panelRect.bottom) {
+                  input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              }
+          }
+      };
+
+      var close = function () {
+          commit(state.input);
+          state.last = state.input;
+          state.input = null;
+          state.value = null;
+          if (state.shift) {
+              toggleShift();
+          }
+          if (isInline()) return;
+          panel.style.display = 'none';
+          restore();
+          window.removeEventListener('resize', reposition);
+          document.removeEventListener('scroll', reposition, true);
+      };
+
+      state.focusIn = function (e) {
+          if (panel.contains(e.target) || !isEditable(e.target)) return;
+          if (state.closeTimeout) {
+              clearTimeout(state.closeTimeout);
+              state.closeTimeout = null;
+          }
+          if (state.input !== e.target) {
+              commit(state.input);
+              open(e.target);
+          }
+      };
+
+      state.focusOut = function () {
+          if (!state.input) return;
+          state.closeTimeout = setTimeout(function () {
+              state.closeTimeout = null;
+              var active = document.activeElement;
+              if (active && (panel.contains(active) || (el.contains(active) && isEditable(active)))) return;
+              close();
+          }, 100);
+      };
+
+      var findTarget = function () {
+          if (state.last && el.contains(state.last) && isEditable(state.last)) return state.last;
+          var inputs = el.querySelectorAll('input, textarea');
+          for (var i = 0; i < inputs.length; i++) {
+              if (!panel.contains(inputs[i]) && isEditable(inputs[i])) return inputs[i];
+          }
+          return null;
+      };
+
+      var executeKey = function (key) {
+          if (!state.input && isInline()) {
+              var target = findTarget();
+              if (target) {
+                  target.focus();
+              }
+          }
+          if (!state.input) return;
+
+          var action = key.getAttribute('data-vk-action');
+
+          if (action == 'backspace') {
+              backspace();
+          } else if (action == 'enter') {
+              enter();
+          } else if (action == 'shift') {
+              toggleShift();
+          } else if (action == 'clear') {
+              setValue(state.input, '', 0);
+          } else if (action == 'close') {
+              var input = state.input;
+              close();
+              if (input) {
+                  input.blur();
+              }
+          } else {
+              var text = state.shift && key.getAttribute('data-vk-shift') ? key.getAttribute('data-vk-shift') : key.getAttribute('data-vk-key');
+              if (text == null) return;
+              insert(text);
+              if (state.shift) {
+                  toggleShift();
+              }
+          }
+      };
+
+      state.keyHandler = function (e) {
+          if (e.button !== undefined && e.button !== 0) return;
+          e.preventDefault();
+          state.suppressClick = false;
+
+          var key = e.target.closest ? e.target.closest('.rz-virtual-keyboard-key') : null;
+          if (!key) return;
+
+          state.suppressClick = true;
+          executeKey(key);
+      };
+
+      state.clickHandler = function (e) {
+          if (state.suppressClick) {
+              state.suppressClick = false;
+              return;
+          }
+
+          var key = e.target.closest ? e.target.closest('.rz-virtual-keyboard-key') : null;
+          if (key) {
+              executeKey(key);
+          }
+      };
+
+      state.mouseDown = function (e) {
+          e.preventDefault();
+      };
+
+      var pointerEvents = window.PointerEvent !== undefined;
+
+      panel.addEventListener(pointerEvents ? 'pointerdown' : 'mousedown', state.keyHandler);
+      panel.addEventListener('click', state.clickHandler);
+      if (pointerEvents) {
+          panel.addEventListener('mousedown', state.mouseDown);
+      }
+      el.addEventListener('focusin', state.focusIn);
+      el.addEventListener('focusout', state.focusOut);
+
+      return {
+          dispose: function () {
+              if (!Radzen[id]) return;
+
+              if (state.closeTimeout) {
+                  clearTimeout(state.closeTimeout);
+              }
+              restore();
+              panel.removeEventListener(pointerEvents ? 'pointerdown' : 'mousedown', state.keyHandler);
+              panel.removeEventListener('click', state.clickHandler);
+              if (pointerEvents) {
+                  panel.removeEventListener('mousedown', state.mouseDown);
+              }
+              el.removeEventListener('focusin', state.focusIn);
+              el.removeEventListener('focusout', state.focusOut);
+              window.removeEventListener('resize', reposition);
+              document.removeEventListener('scroll', reposition, true);
+
+              Radzen[id] = null;
+          }
+      };
   },
   createSlider: function (
     id,
@@ -465,8 +1676,9 @@ window.Radzen = {
     step,
     isVertical
   ) {
-    Radzen[id] = {};
-    Radzen[id].mouseMoveHandler = function (e) {
+    var state = {};
+    Radzen[id] = state;
+    state.mouseMoveHandler = function (e) {
       e.preventDefault();
 
       var handle = slider.isMin ? minHandle : maxHandle;
@@ -499,24 +1711,24 @@ window.Radzen = {
         newValue >= min &&
         newValue <= max
       ) {
-        slider.invokeMethodAsync(
+        try { slider.invokeMethodAsync(
           'RadzenSlider.OnValueChange',
           newValue,
           !!slider.isMin
-        );
+        ); } catch { }
       }
     };
 
-    Radzen[id].mouseDownHandler = function (e) {
+    state.mouseDownHandler = function (e) {
       if (parent.classList.contains('rz-state-disabled')) return;
 
-      document.addEventListener('mousemove', Radzen[id].mouseMoveHandler);
-      document.addEventListener('touchmove', Radzen[id].mouseMoveHandler, {
+      document.addEventListener('mousemove', state.mouseMoveHandler);
+      document.addEventListener('touchmove', state.mouseMoveHandler, {
         passive: false, capture: true
       });
 
-      document.addEventListener('mouseup', Radzen[id].mouseUpHandler);
-      document.addEventListener('touchend', Radzen[id].mouseUpHandler, {
+      document.addEventListener('mouseup', state.mouseUpHandler);
+      document.addEventListener('touchend', state.mouseUpHandler, {
         passive: true
       });
 
@@ -535,52 +1747,50 @@ window.Radzen = {
         var newValue = percent * (max - min) + min;
         var oldValue = range ? value[slider.isMin ? 0 : 1] : value;
         if (newValue >= min && newValue <= max && newValue != oldValue) {
-          slider.invokeMethodAsync(
+          try { slider.invokeMethodAsync(
             'RadzenSlider.OnValueChange',
             newValue,
             !!slider.isMin
-          );
+          ); } catch { }
         }
       }
     };
 
-    Radzen[id].mouseUpHandler = function (e) {
+    state.mouseUpHandler = function (e) {
       slider.canChange = false;
-      document.removeEventListener('mousemove', Radzen[id].mouseMoveHandler);
-      document.removeEventListener('touchmove', Radzen[id].mouseMoveHandler, {
+      document.removeEventListener('mousemove', state.mouseMoveHandler);
+      document.removeEventListener('touchmove', state.mouseMoveHandler, {
         passive: false, capture: true
       });
-      document.removeEventListener('mouseup', Radzen[id].mouseUpHandler);
-      document.removeEventListener('touchend', Radzen[id].mouseUpHandler, {
+      document.removeEventListener('mouseup', state.mouseUpHandler);
+      document.removeEventListener('touchend', state.mouseUpHandler, {
         passive: true
       });
     };
 
-    parent.addEventListener('mousedown', Radzen[id].mouseDownHandler);
-    parent.addEventListener('touchstart', Radzen[id].mouseDownHandler, {
+    parent.addEventListener('mousedown', state.mouseDownHandler);
+    parent.addEventListener('touchstart', state.mouseDownHandler, {
       passive: true
     });
-  },
-  destroySlider: function (id, parent) {
-    if (!Radzen[id]) return;
 
-    if (Radzen[id].mouseMoveHandler) {
-      document.removeEventListener('mousemove', Radzen[id].mouseMoveHandler);
-      document.removeEventListener('touchmove', Radzen[id].mouseMoveHandler);
-      delete Radzen[id].mouseMoveHandler;
-    }
-    if (Radzen[id].mouseUpHandler) {
-      document.removeEventListener('mouseup', Radzen[id].mouseUpHandler);
-      document.removeEventListener('touchend', Radzen[id].mouseUpHandler);
-      delete Radzen[id].mouseUpHandler;
-    }
-    if (Radzen[id].mouseDownHandler) {
-      parent.removeEventListener('mousedown', Radzen[id].mouseDownHandler);
-      parent.removeEventListener('touchstart', Radzen[id].mouseDownHandler);
-      delete Radzen[id].mouseDownHandler;
-    }
+    return { dispose: function() {
+      document.removeEventListener('mousemove', state.mouseMoveHandler);
+      document.removeEventListener('touchmove', state.mouseMoveHandler, {
+        passive: false, capture: true
+      });
+      document.removeEventListener('mouseup', state.mouseUpHandler);
+      document.removeEventListener('touchend', state.mouseUpHandler, {
+        passive: true
+      });
+      parent.removeEventListener('mousedown', state.mouseDownHandler);
+      parent.removeEventListener('touchstart', state.mouseDownHandler, {
+        passive: true
+      });
 
-    Radzen[id] = null;
+      if (Radzen[id] === state) {
+        Radzen[id] = null;
+      }
+    }};
   },
   prepareDrag: function (el) {
     if (el) {
@@ -588,14 +1798,239 @@ window.Radzen = {
         el.ondragstart = function (e) { e.dataTransfer.setData('', e.target.id); };
     }
   },
-  focusElement: function (elementId) {
+  positionValidator: function (id, component, position) {
+    var validator = document.getElementById(id);
+
+    if (!validator) {
+      return;
+    }
+
+    if (validator.__rzObserver) {
+      validator.__rzObserver.disconnect();
+    }
+
+    validator.style.transform = '';
+
+    var named = document.getElementById(component) || document.querySelector('[name="' + component + '"]');
+
+    if (position == 'bottom' || !named) {
+      return;
+    }
+
+    var anchor = named.parentElement && getComputedStyle(named).display == 'none' ? named.parentElement : named;
+    var observer = null;
+    var observedField = null;
+
+    var resolveField = function () {
+      if (!anchor.isConnected || anchor.getClientRects().length == 0) {
+        return null;
+      }
+
+      var field = anchor;
+
+      while (field && (field.offsetWidth == 0 || field.offsetHeight == 0)) {
+        field = field.parentElement;
+      }
+
+      return field && field.closest('.rz-radio-button-list') || field;
+    };
+
+    var place = function () {
+      var gap = 12;
+
+      validator.style.transform = '';
+
+      var field = resolveField();
+
+      if (!field || validator.getClientRects().length == 0) {
+        return;
+      }
+
+      if (field != anchor && field != observedField) {
+        requestAnimationFrame(function () {
+          if (validator.__rzObserver == observer) {
+            track(resolveField());
+          }
+        });
+      }
+
+      var t = field.getBoundingClientRect();
+      var v = validator.getBoundingClientRect();
+      var left = t.left;
+      var top = t.top;
+
+      if (position == 'top') {
+        top = t.top - v.height - gap;
+      } else if (position == 'left') {
+        left = t.left - v.width - gap;
+      } else if (position == 'right') {
+        left = t.right + gap;
+      }
+
+      validator.style.transform = 'translate(' + (left - v.left) + 'px, ' + (top - v.top) + 'px)';
+    };
+
+    var track = function (field) {
+      if (!field || field == anchor || field == observedField) {
+        return;
+      }
+
+      if (observedField) {
+        observer.unobserve(observedField);
+      }
+
+      observedField = field;
+      observer.observe(field);
+    };
+
+    observer = validator.__rzObserver = new ResizeObserver(function () {
+      if (!validator.isConnected) {
+        observer.disconnect();
+        return;
+      }
+
+      place();
+    });
+
+    observer.observe(anchor);
+    observer.observe(validator);
+    track(resolveField());
+  },
+  focusElement: function (elementId, onlyIfFocusNotMoved) {
     var el = document.getElementById(elementId);
-    if (el) {
-      el.focus();
+    if (!el) return;
+    if (onlyIfFocusNotMoved) {
+      var ae = document.activeElement;
+      if (ae && ae != document.body && ae != el && !ae.closest('.rz-lookup-panel, .rz-dropdown-panel, .rz-multiselect-panel')) {
+        return;
+      }
+    }
+    el.focus();
+  },
+  focusNext: function (container, reverse, popupId) {
+    if (!container) return;
+    if (container.isConnected && Radzen.focusNextInTabOrder(container, reverse, popupId)) return;
+    var selector = 'a[href]:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"]):not([disabled])';
+    var candidates = Array.from(document.querySelectorAll(selector)).filter(function (el) {
+      return (el.offsetWidth > 0 || el.offsetHeight > 0) && el !== container && !container.contains(el) && !Radzen.isInPopup(el, popupId);
+    });
+    if (reverse) {
+      for (var i = candidates.length - 1; i >= 0; i--) {
+        if (container.compareDocumentPosition(candidates[i]) & Node.DOCUMENT_POSITION_PRECEDING) {
+          candidates[i].focus();
+          return;
+        }
+      }
+    } else {
+      for (var i = 0; i < candidates.length; i++) {
+        if (container.compareDocumentPosition(candidates[i]) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          candidates[i].focus();
+          return;
+        }
+      }
     }
   },
-  scrollCarouselItem: function (el) {
-    el.parentElement.scroll(el.offsetLeft, 0);
+  focusNextInTabOrder: function (container, reverse, popupId) {
+    var selector = 'a[href], button, input:not([type="hidden"]), select, textarea, details > summary, [tabindex]';
+    var candidates = Array.from(document.querySelectorAll(selector)).filter(function (el) {
+      return el === container ||
+        (!container.contains(el) && !Radzen.isInPopup(el, popupId) && Radzen.isTabbable(el));
+    });
+
+    var radioGroups = new Map();
+    candidates.forEach(function (el) {
+      if (el.type === 'radio' && el.name) {
+        var owner = el.form || document;
+        var groups = radioGroups.get(owner) || new Map();
+        var radios = groups.get(el.name) || [];
+        radios.push(el);
+        groups.set(el.name, radios);
+        radioGroups.set(owner, groups);
+      }
+    });
+    var keptRadios = new Set();
+    radioGroups.forEach(function (groups) {
+      groups.forEach(function (radios) {
+        keptRadios.add(radios.find(function (r) { return r.checked; }) || radios[0]);
+      });
+    });
+
+    var rank = function (el) { return el.tabIndex > 0 ? el.tabIndex : Number.MAX_SAFE_INTEGER; };
+    var ordered = candidates
+      .filter(function (el) { return !(el.type === 'radio' && el.name) || keptRadios.has(el); })
+      .map(function (el, index) { return { el: el, index: index }; })
+      .sort(function (a, b) { return rank(a.el) - rank(b.el) || a.index - b.index; })
+      .map(function (item) { return item.el; });
+
+    var position = ordered.indexOf(container);
+    if (position < 0) return false;
+    var next = ordered[reverse ? position - 1 : position + 1];
+    if (!next) return false;
+    next.focus();
+    return true;
+  },
+  isTabbable: function (el) {
+    if (el.tabIndex < 0 || el.matches(':disabled') || el.closest('[inert]')) return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    var style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+    var parent = el.parentElement;
+    if (el.tagName === 'SUMMARY' && parent && parent.tagName === 'DETAILS') parent = parent.parentElement;
+    return !(parent && parent.closest('details:not([open])'));
+  },
+  isInPopup: function (el, popupId) {
+    return !!popupId && !!el.closest('#' + CSS.escape(popupId));
+  },
+  scrollCarouselItem: function (el, duration) {
+    var container = el.parentElement;
+    var target = el.offsetLeft;
+    if (duration == null || duration < 0) {
+        container.scroll(target, 0);
+        return;
+    }
+    if (duration === 0) {
+        container.style.scrollBehavior = 'auto';
+        container.scroll(target, 0);
+        container.style.scrollBehavior = '';
+        return;
+    }
+    container.style.scrollBehavior = 'auto';
+    container.style.scrollSnapType = 'none';
+    var start = container.scrollLeft;
+    var distance = target - start;
+    var startTime = null;
+    function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        var elapsed = timestamp - startTime;
+        var progress = Math.min(elapsed / duration, 1);
+        var ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        container.scrollLeft = start + distance * ease;
+        if (elapsed < duration) {
+            requestAnimationFrame(step);
+        } else {
+            container.style.scrollBehavior = '';
+            container.style.scrollSnapType = '';
+        }
+    }
+    requestAnimationFrame(step);
+  },
+  createCarousel: function (container, ref) {
+    var scrollTimeout = null;
+    function handler() {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(function () {
+            var children = container.children;
+            if (!children.length) return;
+            var itemWidth = children[0].offsetWidth;
+            if (itemWidth === 0) return;
+            var index = Math.round(Math.abs(container.scrollLeft) / itemWidth);
+            if (index < 0) index = 0;
+            if (index >= children.length) index = children.length - 1;
+            try { ref.invokeMethodAsync('RadzenCarousel.OnScroll', index); } catch { }
+        }, 100);
+    }
+    container.addEventListener('scroll', handler, { passive: true });
+    return { dispose: function () { container.removeEventListener('scroll', handler); } };
   },
   scrollIntoViewIfNeeded: function (ref, selector) {
     var el = selector ? ref.getElementsByClassName(selector)[0] : ref;
@@ -605,8 +2040,81 @@ window.Radzen = {
         el.scrollIntoView();
     }
   },
+  scrollIntoViewIfNeededById: function (id) {
+    var el = document.getElementById(id);
+    if (el) {
+        Radzen.scrollIntoViewIfNeeded(el);
+    }
+  },
+  focusPanelMenuItem: function (menu, activeId) {
+    if (!menu) return;
+    var focused = menu.querySelectorAll('.rz-navigation-item.rz-state-focused');
+    for (var i = 0; i < focused.length; i++) {
+        focused[i].classList.remove('rz-state-focused');
+    }
+    if (activeId) {
+        menu.setAttribute('aria-activedescendant', activeId);
+        var el = document.getElementById(activeId);
+        if (el) {
+            el.classList.add('rz-state-focused');
+            Radzen.scrollIntoViewIfNeeded(el);
+        }
+    } else {
+        menu.removeAttribute('aria-activedescendant');
+    }
+  },
+  updateActiveDescendant: function (ul, li, index) {
+    if (!ul) return;
+    // The popup is appended to document.body when opened, so ul.closest('[role="combobox"]')
+    // fails once the dropdown is open. Fall back to a reverse lookup via aria-controls.
+    // There can be more than one combobox referencing the same listbox (the trigger and a
+    // filter input inside the popup). aria-activedescendant must be set only on the element
+    // that currently has DOM focus (the filter input while filtering, otherwise the trigger),
+    // so a non-focused combobox never carries a stale active-descendant.
+    var comboboxes = [];
+    var ancestor = ul.closest('[role="combobox"]');
+    if (ancestor) {
+      comboboxes.push(ancestor);
+    }
+    if (ul.id && window.CSS && CSS.escape) {
+      var escapedId = CSS.escape(ul.id);
+      var matches = document.querySelectorAll(
+        '[aria-controls="' + escapedId + '"][role="combobox"]'
+      );
+      for (var i = 0; i < matches.length; i++) {
+        if (comboboxes.indexOf(matches[i]) === -1) {
+          comboboxes.push(matches[i]);
+        }
+      }
+    }
+
+    var focused = null;
+    for (var f = 0; f < comboboxes.length; f++) {
+      if (comboboxes[f] === document.activeElement) {
+        focused = comboboxes[f];
+        break;
+      }
+    }
+    if (!focused && comboboxes.length) {
+      focused = comboboxes[0];
+    }
+
+    for (var c = 0; c < comboboxes.length; c++) {
+      if (comboboxes[c] !== focused) {
+        comboboxes[c].removeAttribute('aria-activedescendant');
+      }
+    }
+
+    if (li && focused) {
+      var itemId = ul.id + '-' + index;
+      li.id = itemId;
+      focused.setAttribute('aria-activedescendant', itemId);
+    } else if (focused) {
+      focused.removeAttribute('aria-activedescendant');
+    }
+  },
   selectListItem: function (input, ul, index) {
-    if (!input || !ul) return;
+    if (!ul) return;
 
     var childNodes = ul.getElementsByTagName('LI');
 
@@ -625,10 +2133,13 @@ window.Radzen = {
     ) {
       childNodes[ul.nextSelectedIndex].classList.add('rz-state-highlight');
       childNodes[ul.nextSelectedIndex].scrollIntoView({block:'nearest'});
+      Radzen.updateActiveDescendant(ul, childNodes[ul.nextSelectedIndex], ul.nextSelectedIndex);
+    } else {
+      Radzen.updateActiveDescendant(ul, null, -1);
     }
   },
   focusListItem: function (input, ul, isDown, startIndex) {
-    if (!input || !ul) return;
+    if (!ul) return;
     var childNodes = ul.getElementsByTagName('LI');
 
     if (!childNodes || childNodes.length == 0) return;
@@ -665,9 +2176,78 @@ window.Radzen = {
     ) {
       childNodes[ul.nextSelectedIndex].classList.add('rz-state-highlight');
       Radzen.scrollIntoViewIfNeeded(childNodes[ul.nextSelectedIndex]);
+      Radzen.updateActiveDescendant(ul, childNodes[ul.nextSelectedIndex], ul.nextSelectedIndex);
+    } else {
+      Radzen.updateActiveDescendant(ul, null, -1);
     }
 
     return ul.nextSelectedIndex;
+  },
+  focusVirtualListItem: function (ul, absoluteIndex, totalCount) {
+    if (!ul) return;
+
+    var childNodes = ul.getElementsByTagName('LI');
+    if (!childNodes || childNodes.length == 0) return;
+
+    var itemHeight = childNodes[0].offsetHeight;
+    if (itemHeight <= 0) return;
+
+    var wrapper = ul.parentElement;
+    if (!wrapper) return;
+
+    // Scroll to make the item at absoluteIndex visible
+    if (absoluteIndex >= 0 && absoluteIndex < totalCount) {
+      var targetTop = absoluteIndex * itemHeight;
+      var targetBottom = targetTop + itemHeight;
+      var viewTop = wrapper.scrollTop;
+      var viewBottom = viewTop + wrapper.clientHeight;
+
+      if (targetBottom > viewBottom) {
+        wrapper.scrollTop = targetBottom - wrapper.clientHeight;
+      } else if (targetTop < viewTop) {
+        wrapper.scrollTop = targetTop;
+      }
+    }
+
+    // Highlight the correct item after scroll
+    function highlightItem() {
+      var lis = ul.getElementsByTagName('LI');
+      if (!lis || lis.length == 0) return;
+
+      var highlighted = ul.querySelectorAll('.rz-state-highlight');
+      for (var i = 0; i < highlighted.length; i++) {
+        highlighted[i].classList.remove('rz-state-highlight');
+      }
+
+      // Determine the start index of rendered items from the top spacer
+      var startIndex = 0;
+      var spacer = ul.firstElementChild;
+      if (spacer && spacer.tagName !== 'LI' && spacer.style && spacer.style.height) {
+        startIndex = Math.round(parseFloat(spacer.style.height) / itemHeight);
+      }
+
+      var relativeIndex = absoluteIndex - startIndex;
+      if (relativeIndex >= 0 && relativeIndex < lis.length) {
+        lis[relativeIndex].classList.add('rz-state-highlight');
+        lis[relativeIndex].scrollIntoView({ block: 'nearest' });
+        Radzen.updateActiveDescendant(ul, lis[relativeIndex], absoluteIndex);
+      } else {
+        Radzen.updateActiveDescendant(ul, null, -1);
+      }
+    }
+
+    // Use MutationObserver to wait for Virtualize to re-render after scroll
+    var observer = new MutationObserver(function () {
+      observer.disconnect();
+      highlightItem();
+    });
+    observer.observe(ul, { childList: true, subtree: true });
+
+    // Also highlight immediately in case no DOM change is needed
+    highlightItem();
+
+    // Disconnect observer after a timeout to avoid memory leaks
+    setTimeout(function () { observer.disconnect(); }, 500);
   },
   clearFocusedHeaderCell: function (gridId) {
     var grid = document.getElementById(gridId);
@@ -701,12 +2281,12 @@ window.Radzen = {
                 }
             }
         }
-        if (key == 'ArrowUp' || key == 'ArrowDown' || key == 'PageUp' || key == 'PageDown') {
+        if (key == 'PageUp' || key == 'PageDown') {
             var rowHeight = rows[rows.length - 1] ? rows[rows.length - 1].offsetHeight : 40;
-            var factor = key == 'PageUp' || key == 'PageDown' ? 10 : 1;
-            table.parentNode.scrollTop = table.parentNode.scrollTop + (factor * (key == 'ArrowDown' || key == 'PageDown' ? rowHeight : -rowHeight));
+            var factor = 10;
+            table.parentNode.scrollTop = table.parentNode.scrollTop + (factor * (key == 'PageDown' ? rowHeight : -rowHeight));
         }
-        else {
+        else if (key == 'Home' || key == 'End') {
             table.parentNode.scrollTop = key == 'Home' ? 0 : table.parentNode.scrollHeight;
         }
     }
@@ -742,7 +2322,54 @@ window.Radzen = {
         table.nextSelectedIndex = rows.length - 1;
     } else if (isVirtual && (key == 'PageUp' || key == 'Home')) {
         table.nextSelectedIndex = 1;
+    } else if (!isVirtual && (key == 'PageDown' || key == 'PageUp' || key == 'Home' || key == 'End')) {
+        var firstDataIndex = thead && thead.rows && thead.rows.length && cellIndex != null ? thead.rows.length : 1;
+        if (firstDataIndex > rows.length - 1) {
+            firstDataIndex = rows.length - 1;
+        }
+        if (key == 'Home') {
+            table.nextSelectedIndex = firstDataIndex;
+        } else if (key == 'End') {
+            table.nextSelectedIndex = rows.length - 1;
+        } else {
+            var pageFactor = 10;
+            table.nextSelectedIndex = table.nextSelectedIndex + (key == 'PageDown' ? pageFactor : -pageFactor);
+            if (table.nextSelectedIndex > rows.length - 1) {
+                table.nextSelectedIndex = rows.length - 1;
+            }
+            if (table.nextSelectedIndex < firstDataIndex) {
+                table.nextSelectedIndex = firstDataIndex;
+            }
+        }
     }
+
+    if (isVirtual && (key == 'ArrowDown' || key == 'ArrowUp')) {
+        var minIndex = cellIndex != null ? 0 : 1;
+        if (key == 'ArrowDown' && table.nextSelectedIndex >= rows.length - 1) {
+            var rh = rows[rows.length - 1] ? rows[rows.length - 1].offsetHeight : 40;
+            table.parentNode.scrollTop += rh;
+            table.nextSelectedIndex = rows.length - 1;
+        } else if (key == 'ArrowUp' && table.nextSelectedIndex <= minIndex) {
+            var rh = rows[rows.length - 1] ? rows[rows.length - 1].offsetHeight : 40;
+            table.parentNode.scrollTop -= rh;
+            table.nextSelectedIndex = minIndex;
+        }
+    }
+
+    var activeId = gridId + '-active-item';
+    var setActiveDescendant = function (el) {
+        var prev = document.getElementById(activeId);
+        if (prev && prev !== el) {
+            prev.removeAttribute('id');
+        }
+        if (el && el.id !== activeId) { el.id = activeId; }
+        if (el) {
+            var roleTarget = grid.matches('[role="grid"],[role="treegrid"]')
+                ? grid
+                : grid.querySelector('[role="grid"],[role="treegrid"]') || grid;
+            roleTarget.setAttribute('aria-activedescendant', activeId);
+        }
+    };
 
     if (key == 'ArrowLeft' || key == 'ArrowRight' || (key == 'ArrowUp' && cellIndex != null && table.nextSelectedIndex == 0 && table.parentNode.scrollTop == 0)) {
         var highlightedCells = rows[table.nextSelectedIndex].querySelectorAll('.rz-state-focused');
@@ -764,8 +2391,9 @@ window.Radzen = {
                     Radzen.scrollIntoViewIfNeeded(cell);
                 }
             }
+            setActiveDescendant(cell);
         }
-    } else if (key == 'ArrowDown' || key == 'ArrowUp') {
+    } else if (key == 'ArrowDown' || key == 'ArrowUp' || (!isVirtual && (key == 'PageDown' || key == 'PageUp' || key == 'Home' || key == 'End'))) {
         var highlighted = table.querySelectorAll('.rz-state-focused');
         if (highlighted.length) {
             for (var i = 0; i < highlighted.length; i++) {
@@ -784,14 +2412,15 @@ window.Radzen = {
                     Radzen.scrollIntoViewIfNeeded(row);
                 }
             }
+            setActiveDescendant(row);
         }
     }
 
     return [table.nextSelectedIndex, table.nextSelectedCellIndex];
   },
-  uploadInputChange: function (e, url, auto, multiple, clear, parameterName) {
+  uploadInputChange: function (e, url, auto, multiple, clear, parameterName, method = 'POST', stream = false) {
       if (auto) {
-          Radzen.upload(e.target, url, multiple, clear, parameterName);
+          Radzen.upload(e.target, url, multiple, clear, parameterName, method, stream);
           e.target.value = '';
       } else {
           Radzen.uploadChange(e.target);
@@ -810,6 +2439,7 @@ window.Radzen = {
       files.push({
         Name: file.name,
         Size: file.size,
+        ContentType: file.type,
         Url: URL.createObjectURL(file)
       });
     }
@@ -829,7 +2459,7 @@ window.Radzen = {
 
       uploadComponent.files = Array.from(fileInput.files);
       uploadComponent.localFiles = files;
-      uploadComponent.invokeMethodAsync('RadzenUpload.OnChange', files);
+      try { suppressDisposed(uploadComponent.invokeMethodAsync('RadzenUpload.OnChange', files)); } catch { }
     }
 
     for (var i = 0; i < fileInput.files.length; i++) {
@@ -848,12 +2478,16 @@ window.Radzen = {
     var localFile = uploadComponent.localFiles.find(function (f) { return f.Name == name; });
     if (localFile) {
       URL.revokeObjectURL(localFile.Url);
+      var localIndex = uploadComponent.localFiles.indexOf(localFile);
+      if (localIndex != -1) {
+        uploadComponent.localFiles.splice(localIndex, 1);
+      }
     }
     var index = uploadComponent.files.indexOf(file)
     if (index != -1) {
         uploadComponent.files.splice(index, 1);
     }
-    var fileInput = document.getElementById(id);
+    var fileInput = document.getElementById(id).querySelector('input[type="file"]');
     if (fileInput && uploadComponent.files.length == 0) {
         fileInput.value = '';
     }
@@ -861,20 +2495,35 @@ window.Radzen = {
   removeFileFromFileInput: function (fileInput) {
     fileInput.value = '';
   },
-  upload: function (fileInput, url, multiple, clear, parameterName) {
+  upload: function (fileInput, url, multiple, clear, parameterName, method = 'POST', stream = false) {
     var uploadComponent = Radzen.uploadComponents && Radzen.uploadComponents[fileInput.id];
     if (!uploadComponent) { return; }
     if (!uploadComponent.files || clear) {
         uploadComponent.files = Array.from(fileInput.files);
     }
-    var data = new FormData();
-    var files = [];
-    var cancelled = false;
-    for (var i = 0; i < uploadComponent.files.length; i++) {
-      var file = uploadComponent.files[i];
-      data.append(parameterName || (multiple ? 'files' : 'file'), file, file.name);
-      files.push({Name: file.name, Size: file.size});
-    }
+    
+	function asFormData() {
+		var data = new FormData();
+		var files = [];
+		for (var i = 0; i < uploadComponent.files.length; i++) {
+			var file = uploadComponent.files[i];
+			data.append(parameterName || (multiple ? 'files' : 'file'), file, file.name);
+			files.push({Name: file.name, Size: file.size});
+		}
+		return {data, files}
+	}
+	
+	function asStream() {
+		if (uploadComponent.files.length > 0) {
+			var file = uploadComponent.files[0];
+			return {data: file, files: [{Name: file.name, Size: file.size}]};
+		}
+		return {data: null, files: []}
+	}
+
+  	var cancelled = false;
+	var {data, files} = stream ? asStream() : asFormData();
+	
     var xhr = new XMLHttpRequest();
     xhr.withCredentials = true;
     xhr.upload.onprogress = function (e) {
@@ -883,7 +2532,7 @@ window.Radzen = {
           Radzen.uploadComponents && Radzen.uploadComponents[fileInput.id];
         if (uploadComponent) {
           var progress = parseInt((e.loaded / e.total) * 100);
-          uploadComponent.invokeMethodAsync(
+          try { uploadComponent.invokeMethodAsync(
             'RadzenUpload.OnProgress',
             progress,
             e.loaded,
@@ -895,7 +2544,7 @@ window.Radzen = {
                   cancelled = true;
                   xhr.abort();
               }
-          });
+          }); } catch { }
         }
       }
     };
@@ -906,27 +2555,27 @@ window.Radzen = {
           Radzen.uploadComponents && Radzen.uploadComponents[fileInput.id];
         if (uploadComponent) {
           if (status === 0 || (status >= 200 && status < 400)) {
-            uploadComponent.invokeMethodAsync(
+            try { uploadComponent.invokeMethodAsync(
               'RadzenUpload.OnComplete',
                 xhr.responseText,
                 cancelled
-            );
+            ); } catch { }
           } else {
-            uploadComponent.invokeMethodAsync(
+            try { uploadComponent.invokeMethodAsync(
               'RadzenUpload.OnError',
               xhr.responseText
-            );
+            ); } catch { }
           }
         }
       }
     };
-    uploadComponent.invokeMethodAsync('GetHeaders').then(function (headers) {
-      xhr.open('POST', url, true);
+    try { uploadComponent.invokeMethodAsync('GetHeaders').then(function (headers) {
+      xhr.open(method, url, true);
       for (var name in headers) {
         xhr.setRequestHeader(name, headers[name]);
       }
       xhr.send(data);
-    });
+    }); } catch { }
   },
   getCookie: function (name) {
     var value = '; ' + decodeURIComponent(document.cookie);
@@ -1044,36 +2693,155 @@ window.Radzen = {
 
     e.preventDefault();
   },
-  openContextMenu: function (x,y,id, instance, callback) {
+  openContextMenu: function (x, y, id, instance, callback, closeOnScroll = false) {
+    var invoker = document.activeElement;
+    if (invoker && invoker !== document.body) {
+        Radzen[id + 'contextMenuInvoker'] = invoker;
+    }
+
+    var previousPopup = document.getElementById(id);
+    var target = closeOnScroll && (x || y) ?
+        document.elementsFromPoint(x, y).find(function (el) { return !previousPopup || !previousPopup.contains(el); }) :
+        invoker;
+
     Radzen.closePopup(id);
 
     Radzen.openPopup(null, id, false, null, x, y, instance, callback);
 
-    setTimeout(function () {
-        var popup = document.getElementById(id);
+    var popup = document.getElementById(id);
+    if (popup && closeOnScroll) {
+        if (popup.__contextMenuScrollHandler) {
+            document.removeEventListener('scroll', popup.__contextMenuScrollHandler, true);
+        }
+
+        popup.__contextMenuTarget = target;
+        popup.__contextMenuScrollHandler = function (e) {
+            var scrollTarget = e.target;
+            var contextMenuTarget = popup.__contextMenuTarget;
+            var targetScrolled = scrollTarget === document ||
+                !contextMenuTarget ||
+                !contextMenuTarget.isConnected ||
+                scrollTarget && scrollTarget.contains && scrollTarget.contains(contextMenuTarget);
+
+            if (!targetScrolled || scrollTarget && scrollTarget.nodeType && popup.contains(scrollTarget)) {
+                return;
+            }
+
+            popup.__contextMenuClosedOnScroll = true;
+            Radzen.activeElement = null;
+            Radzen.closePopup(id, instance, callback, e);
+        };
+
+        document.addEventListener('scroll', popup.__contextMenuScrollHandler, true);
+    }
+
+    requestAnimationFrame(function () {
         if (popup) {
             var menu = popup.querySelector('.rz-menu');
             if (menu) {
                 menu.focus();
             }
         }
-    }, 500);
+    });
   },
-  openTooltip: function (target, id, delay, duration, position, closeTooltipOnDocumentClick, instance, callback) {
+  restoreContextMenuFocus: function (id) {
+    var invoker = Radzen[id + 'contextMenuInvoker'];
+    Radzen[id + 'contextMenuInvoker'] = null;
+    var popup = document.getElementById(id);
+    var closedOnScroll = popup && popup.__contextMenuClosedOnScroll;
+    if (popup) {
+        delete popup.__contextMenuClosedOnScroll;
+    }
+    if (invoker && document.body.contains(invoker) && typeof invoker.focus === 'function') {
+        if (closedOnScroll) {
+            invoker.focus({ preventScroll: true });
+        } else {
+            invoker.focus();
+        }
+    }
+  },
+  openTooltip: function (target, id, delay, duration, position, closeTooltipOnDocumentClick, instance, callback, clientX, clientY) {
     Radzen.closeTooltip(id);
 
+    if (clientX != null && clientY != null) {
+        position = null;
+        disableSmartPosition = true;
+    }
+    else {
+        disableSmartPosition = false;
+    }
+
+    if (target) {
+        target.setAttribute('aria-describedby', id);
+        Radzen[id + 'target'] = target;
+    }
+
     if (delay) {
-        Radzen[id + 'delay'] = setTimeout(Radzen.openPopup, delay, target, id, false, position, null, null, instance, callback, closeTooltipOnDocumentClick);
+        Radzen[id + 'delay'] = setTimeout(Radzen.openPopup, delay, target, id, false, position, clientX, clientY, instance, callback, closeTooltipOnDocumentClick, false, disableSmartPosition);
     } else {
-        Radzen.openPopup(target, id, false, position, null, null, instance, callback, closeTooltipOnDocumentClick);
+        Radzen.openPopup(target, id, false, position, clientX, clientY, instance, callback, closeTooltipOnDocumentClick, false, disableSmartPosition);
     }
 
     if (duration) {
       Radzen[id + 'duration'] = setTimeout(Radzen.closePopup, duration, id, instance, callback);
     }
+
+    // WCAG 1.4.13 (Content on Hover or Focus): the tooltip stays visible as long as
+    // the pointer is over it, so the user can move onto and read/interact with it.
+    var tooltipPopup = document.getElementById(id);
+    if (tooltipPopup) {
+        Radzen[id + 'tooltipEnter'] = function () {
+            if (Radzen[id + 'duration']) {
+                clearTimeout(Radzen[id + 'duration']);
+                Radzen[id + 'duration'] = null;
+            }
+        };
+        Radzen[id + 'tooltipLeave'] = function () {
+            if (duration) {
+                Radzen[id + 'duration'] = setTimeout(Radzen.closePopup, duration, id, instance, callback);
+            }
+        };
+        tooltipPopup.addEventListener('mouseenter', Radzen[id + 'tooltipEnter']);
+        tooltipPopup.addEventListener('mouseleave', Radzen[id + 'tooltipLeave']);
+    }
+
+    // WAI-ARIA APG Tooltip pattern: Escape dismisses the tooltip.
+    Radzen[id + 'esc'] = function (e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            Radzen.closeTooltip(id);
+            if (instance && callback) {
+                try { suppressDisposed(instance.invokeMethodAsync(callback, null)); } catch (ex) { }
+            }
+        }
+    };
+    document.addEventListener('keydown', Radzen[id + 'esc']);
   },
   closeTooltip(id) {
     Radzen.activeElement = null;
+
+    var target = Radzen[id + 'target'];
+    if (target) {
+        target.removeAttribute('aria-describedby');
+        Radzen[id + 'target'] = null;
+    }
+
+    if (Radzen[id + 'esc']) {
+        document.removeEventListener('keydown', Radzen[id + 'esc']);
+        Radzen[id + 'esc'] = null;
+    }
+
+    var tooltipPopup = document.getElementById(id);
+    if (tooltipPopup) {
+        if (Radzen[id + 'tooltipEnter']) {
+            tooltipPopup.removeEventListener('mouseenter', Radzen[id + 'tooltipEnter']);
+            Radzen[id + 'tooltipEnter'] = null;
+        }
+        if (Radzen[id + 'tooltipLeave']) {
+            tooltipPopup.removeEventListener('mouseleave', Radzen[id + 'tooltipLeave']);
+            Radzen[id + 'tooltipLeave'] = null;
+        }
+    }
+
     Radzen.closePopup(id);
 
     if (Radzen[id + 'delay']) {
@@ -1083,41 +2851,6 @@ window.Radzen = {
     if (Radzen[id + 'duration']) {
         clearTimeout(Radzen[id + 'duration']);
     }
-  },
-  destroyDatePicker(id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-
-      var button = el.querySelector('.rz-datepicker-trigger');
-      if (button) {
-          button.onclick = null;
-      }
-      var input = el.querySelector('.rz-inputtext');
-      if (input) {
-          input.onclick = null;
-      }
-  },
-  createDatePicker(el, popupId) {
-      if(!el) return;
-      var handler = function (e, condition) {
-          if (condition) {
-              Radzen.togglePopup(e.currentTarget.parentNode, popupId, false, null, null, true, false);
-          }
-      };
-
-      var input = el.querySelector('.rz-inputtext');
-      var button = el.querySelector('.rz-datepicker-trigger');
-      if (button) {
-          button.onclick = function (e) {
-              handler(e, !e.currentTarget.classList.contains('rz-state-disabled') && (input ? !input.classList.contains('rz-readonly') : true));
-          };
-      }
-
-      if (input) {
-          input.onclick = function (e) {
-              handler(e, e.currentTarget.classList.contains('rz-input-trigger') && !e.currentTarget.classList.contains('rz-readonly'));
-          };
-      }
   },
   findPopup: function (id) {
     var popups = [];
@@ -1149,9 +2882,24 @@ window.Radzen = {
 
       popup.style.top = top + 'px';
   },
+  setPopupAriaExpanded: function (parent, id, expanded) {
+    if (!parent || !id) return;
+    var control = null;
+    if (parent.getAttribute && parent.getAttribute('aria-controls') === id) {
+      control = parent;
+    } else if (parent.querySelector) {
+      control = parent.querySelector('[aria-controls="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+    }
+    if (!control && parent.getAttribute && parent.getAttribute('role') === 'combobox') {
+      control = parent;
+    }
+    if (control) {
+      control.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+  },
   openPopup: function (parent, id, syncWidth, position, x, y, instance, callback, closeOnDocumentClick = true, autoFocusFirstElement = false, disableSmartPosition = false) {
     var popup = document.getElementById(id);
-    if (!popup) return;
+      if (!popup || popup && popup.style.display == 'block' && popup.classList.contains('rz-autocomplete-panel')) return;
 
     Radzen.activeElement = document.activeElement;
 
@@ -1185,13 +2933,30 @@ window.Radzen = {
     }
 
     popup.style.display = 'block';
+    popup.style.visibility = 'hidden';
     popup.onanimationend = null;
-    popup.classList.add("rz-open");
+    popup.onanimationcancel = null;
     popup.classList.remove("rz-close");
+    Radzen.setPopupAriaExpanded(parent, id, true);
+
+    var constrained = popup.__constrainedContent;
+    if (constrained) {
+        if (constrained.element.style.maxHeight === constrained.maxHeight) {
+            constrained.element.style.maxHeight = constrained.previousMaxHeight;
+            constrained.element.style.overflowY = constrained.previousOverflowY;
+        }
+        delete popup.__constrainedContent;
+    }
 
     var rect = popup.getBoundingClientRect();
     rect.width = x ? rect.width + 20 : rect.width;
     rect.height = y ? rect.height + 20 : rect.height;
+
+    var isRTL = Radzen.isRTL(popup);
+
+    if (isRTL && parent && (!position || position == 'bottom' || position == 'top')) {
+      left = parentRect.right - rect.width;
+    }
 
     var smartPosition = !position || position == 'bottom';
 
@@ -1199,59 +2964,144 @@ window.Radzen = {
         if (disableSmartPosition !== true) {
             top = parentRect.top - rect.height;
         }
-
-      if (position) {
-        top = top - 40;
-        var tooltipContent = popup.children[0];
-        var tooltipContentClassName = 'rz-' + position + '-tooltip-content';
-        if (tooltipContent.classList.contains(tooltipContentClassName)) {
-          tooltipContent.classList.remove(tooltipContentClassName);
-          tooltipContent.classList.add('rz-top-tooltip-content');
-            position = 'top';
-            if (instance && callback) {
-                try { instance.invokeMethodAsync(callback, position); } catch { }
-            }
-        }
-      }
     }
 
     if (smartPosition && left + rect.width > window.innerWidth && window.innerWidth > rect.width) {
-      left = !position ? window.innerWidth - rect.width : rect.left;
+      left = window.innerWidth - rect.width;
+    }
 
-      if (position) {
-        top = y || parentRect.top;
-        var tooltipContent = popup.children[0];
-        var tooltipContentClassName = 'rz-' + position + '-tooltip-content';
-        if (tooltipContent.classList.contains(tooltipContentClassName)) {
-          tooltipContent.classList.remove(tooltipContentClassName);
-          tooltipContent.classList.add('rz-left-tooltip-content');
-          position = 'left';
-          if (instance && callback) {
-              try { instance.invokeMethodAsync(callback, position); } catch { }
+    if (smartPosition && isRTL && left < 0 && window.innerWidth > rect.width) {
+      left = 0;
+    }
+
+    if (position && !(disableSmartPosition === true && x != null && y != null)) {
+      var tooltipPlacement = function (side) {
+        switch (side) {
+          case 'left':  return { left: parentRect.left - rect.width - 5, top: parentRect.top };
+          case 'right': return { left: parentRect.right + 10, top: parentRect.top };
+          case 'top':   return { left: isRTL ? parentRect.right - rect.width : parentRect.left, top: parentRect.top - rect.height + 5 };
+          default:      return { left: isRTL ? parentRect.right - rect.width : parentRect.left, top: parentRect.bottom + 20 };
+        }
+      };
+
+      var tooltipFits = function (p) {
+        return p.left >= 0 && p.top >= 0 &&
+               p.left + rect.width <= window.innerWidth &&
+               p.top + rect.height <= window.innerHeight;
+      };
+
+      var fallbackOrder = {
+        left: ['left', 'right', 'top', 'bottom'],
+        right: ['right', 'left', 'top', 'bottom'],
+        top: ['top', 'bottom', 'right', 'left'],
+        bottom: ['bottom', 'top', 'right', 'left']
+      }[position] || [position];
+
+      var tooltipContent = popup.children[0];
+      var tooltipSide = position;
+      var setTooltipSide = function (side) {
+        if (side == tooltipSide || !tooltipContent || !tooltipContent.classList.contains('rz-' + tooltipSide + '-tooltip-content')) return;
+        tooltipContent.classList.remove('rz-' + tooltipSide + '-tooltip-content');
+        tooltipContent.classList.add('rz-' + side + '-tooltip-content');
+        tooltipSide = side;
+        rect = popup.getBoundingClientRect();
+      };
+
+      var resolvedPosition = null;
+      var placement = null;
+
+      for (var pi = 0; pi < fallbackOrder.length; pi++) {
+        setTooltipSide(fallbackOrder[pi]);
+        var candidate = tooltipPlacement(fallbackOrder[pi]);
+        if (tooltipFits(candidate)) {
+          resolvedPosition = fallbackOrder[pi];
+          placement = candidate;
+          break;
+        }
+      }
+
+      if (!placement) {
+        var availableHeight = function (side) {
+          switch (side) {
+            case 'top': return parentRect.top + 5;
+            case 'bottom': return window.innerHeight - parentRect.bottom - 20;
+            default: return window.innerHeight;
           }
+        };
+
+        var isVertical = function (side) {
+          return side == 'top' || side == 'bottom';
+        };
+
+        var best = null;
+
+        for (pi = 0; pi < fallbackOrder.length; pi++) {
+          if (best && isVertical(best.side) != isVertical(fallbackOrder[pi])) break;
+          setTooltipSide(fallbackOrder[pi]);
+          var sideCandidate = tooltipPlacement(fallbackOrder[pi]);
+          var available = availableHeight(fallbackOrder[pi]);
+          if (sideCandidate.left >= 0 && sideCandidate.left + rect.width <= window.innerWidth && (!best || available > best.available)) {
+            best = { side: fallbackOrder[pi], available: available };
+          }
+        }
+
+        if (!best) {
+          best = { side: position, available: availableHeight(position) };
+        }
+
+        setTooltipSide(best.side);
+
+        if (tooltipContent && rect.height > best.available && best.available > 0) {
+          var scrollTarget = tooltipContent;
+          var onlyChild = tooltipContent.children.length == 1 ? tooltipContent.children[0] : null;
+          var hasText = Array.prototype.some.call(tooltipContent.childNodes, function (node) { return node.nodeType == 3 && node.textContent.trim(); });
+          if (onlyChild && !hasText && getComputedStyle(onlyChild).display != 'inline') {
+            scrollTarget = onlyChild;
+          }
+          var targetRect = scrollTarget.getBoundingClientRect();
+          var targetStyle = getComputedStyle(scrollTarget);
+          var targetExtra = targetStyle.boxSizing === 'border-box' ? 0 :
+            parseFloat(targetStyle.paddingTop) + parseFloat(targetStyle.paddingBottom) + parseFloat(targetStyle.borderTopWidth) + parseFloat(targetStyle.borderBottomWidth);
+          var maxHeight = Math.floor(best.available - (rect.height - targetRect.height) - targetExtra) + 'px';
+          popup.__constrainedContent = { element: scrollTarget, maxHeight: maxHeight, previousMaxHeight: scrollTarget.style.maxHeight, previousOverflowY: scrollTarget.style.overflowY };
+          scrollTarget.style.maxHeight = maxHeight;
+          scrollTarget.style.overflowY = 'auto';
+          rect = popup.getBoundingClientRect();
+        }
+
+        resolvedPosition = best.side;
+        placement = tooltipPlacement(best.side);
+        placement.left = Math.max(0, Math.min(placement.left, window.innerWidth - rect.width));
+        placement.top = Math.max(0, Math.min(placement.top, window.innerHeight - rect.height));
+      }
+
+      left = placement.left;
+      top = placement.top;
+
+      if (resolvedPosition != position) {
+        position = resolvedPosition;
+        if (instance && callback) {
+          try { suppressDisposed(instance.invokeMethodAsync(callback, position)); } catch { }
         }
       }
     }
 
-    if (smartPosition) {
-      if (position) {
-        top = top + 20;
-      }
-    }
+    if (disableSmartPosition && x != null && y != null) {
+        left = x + 10;
+        top = y + 10;
+        var tooltipContent = popup.children[0];
+        var tooltipContentClassName = 'rz-bottom-tooltip-content';
+        if (tooltipContent.classList.contains(tooltipContentClassName)) {
+            tooltipContent.classList.remove(tooltipContentClassName);
+        }
 
-    if (position == 'left') {
-      left = parentRect.left - rect.width - 5;
-      top =  parentRect.top;
-    }
+        if (left + rect.width > window.innerWidth && window.innerWidth > rect.width) {
+            top = parentRect.top - rect.height;
+        }
 
-    if (position == 'right') {
-      left = parentRect.right + 10;
-      top = parentRect.top;
-    }
-
-    if (position == 'top') {
-      top = parentRect.top - rect.height + 5;
-      left = parentRect.left;
+        if (left + rect.width > window.innerWidth && window.innerWidth > rect.width) {
+            left = window.innerWidth - rect.width;
+        }
     }
 
     popup.style.zIndex = 2000;
@@ -1280,7 +3130,8 @@ window.Radzen = {
         }
 
         var closestLink = e.target.closest && (e.target.closest('.rz-link') || e.target.closest('.rz-navigation-item-link'));
-        if (e.type == 'resize' && !/Android/i.test(navigator.userAgent)) {
+        if (e.type == 'resize' && !/Android/i.test(navigator.userAgent) &&
+            !['input', 'textarea'].includes(document.activeElement ? document.activeElement.tagName.toLowerCase() : '')) {
             if (closestLink && closestLink.closest && closestLink.closest('a') && e.button == 0) {
                 closestLink.closest('a').click();
                 Radzen.closeAllPopups();
@@ -1305,11 +3156,83 @@ window.Radzen = {
 
     Radzen.popups.push({ id, instance, callback, parent });
 
+    if (popup.parentNode && popup.parentNode !== document.body) {
+        popup.__radzenHome = popup.parentNode;
+    }
+
     document.body.appendChild(popup);
+
+    if (!position) {
+        var popupRect = popup.getBoundingClientRect();
+        // Clamp into the viewport. If the popup is smaller than the viewport, shift it
+        // so its right/bottom edge fits. If it is larger than the viewport, pin the
+        // top/left corner to the viewport origin so content is at least reachable
+        // (instead of leaving it positioned off-screen at the anchor).
+        if (popupRect.right > window.innerWidth) {
+            popup.style.left = Math.max(scrollLeft, window.innerWidth - popupRect.width + scrollLeft) + 'px';
+        }
+        if (popupRect.bottom > window.innerHeight) {
+            popup.style.top = Math.max(scrollTop, window.innerHeight - popupRect.height + scrollTop) + 'px';
+        }
+    }
+
+    popup.style.visibility = '';
+    popup.classList.add("rz-open");
+
     document.removeEventListener('mousedown', Radzen[id]);
     document.addEventListener('mousedown', Radzen[id]);
     window.removeEventListener('resize', Radzen[id]);
     window.addEventListener('resize', Radzen[id]);
+
+    if (window.visualViewport && parent &&
+        (popup.classList.contains('rz-dropdown-panel') || popup.classList.contains('rz-multiselect-panel'))) {
+        var itemsWrapper = popup.querySelector('.rz-dropdown-items-wrapper, .rz-multiselect-items-wrapper');
+        if (itemsWrapper) {
+            popup.__originalWrapperMaxHeight = itemsWrapper.style.maxHeight;
+            popup.__originalPopupTop = popup.style.top;
+            popup.__viewportResizeHandler = function () {
+                if (popup.style.display !== 'block') return;
+                var vv = window.visualViewport;
+                var viewportTop = vv.offsetTop;
+                var viewportBottom = viewportTop + vv.height;
+                itemsWrapper.style.maxHeight = popup.__originalWrapperMaxHeight;
+                popup.style.top = popup.__originalPopupTop;
+                var pRect = parent.getBoundingClientRect();
+                var popRect = popup.getBoundingClientRect();
+                if (popRect.top >= viewportTop - 1 && popRect.bottom <= viewportBottom + 1) return;
+                var chromeHeight = popRect.height - itemsWrapper.getBoundingClientRect().height;
+                var spaceBelow = viewportBottom - pRect.bottom - 5 - chromeHeight;
+                var spaceAbove = pRect.top - viewportTop - 5 - chromeHeight;
+                var sTop = /Edge/.test(navigator.userAgent) ? document.body.scrollTop : document.documentElement.scrollTop;
+                if (spaceBelow >= spaceAbove) {
+                    popup.style.top = (pRect.bottom + sTop) + 'px';
+                    itemsWrapper.style.maxHeight = Math.max(60, spaceBelow) + 'px';
+                } else {
+                    itemsWrapper.style.maxHeight = Math.max(60, spaceAbove) + 'px';
+                    var newHeight = popup.getBoundingClientRect().height;
+                    popup.style.top = (pRect.top - newHeight + sTop) + 'px';
+                }
+            };
+            window.visualViewport.addEventListener('resize', popup.__viewportResizeHandler);
+        }
+    }
+
+    if (popup.__contentResizeObserver) {
+        popup.__contentResizeObserver.disconnect();
+        delete popup.__contentResizeObserver;
+    }
+
+    if (!position && parent && disableSmartPosition !== true && !popup.__viewportResizeHandler && typeof ResizeObserver !== 'undefined') {
+        var observedHeight = popup.getBoundingClientRect().height;
+        popup.__contentResizeObserver = new ResizeObserver(function () {
+            if (popup.style.display !== 'block') return;
+            var height = popup.getBoundingClientRect().height;
+            if (height === observedHeight) return;
+            observedHeight = height;
+            Radzen.repositionPopup(parent, id);
+        });
+        popup.__contentResizeObserver.observe(popup);
+    }
 
     var p = parent;
     while (p && p != document.body) {
@@ -1337,6 +3260,33 @@ window.Radzen = {
             }
         }, 200);
     }
+
+    if (popup.__escapeHandler) {
+        popup.removeEventListener('keydown', popup.__escapeHandler, true);
+    }
+    popup.__escapeHandler = function (e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            var menu = popup.querySelector('.rz-menu[role="menu"]');
+            if (menu && menu.querySelector('.rz-navigation-item-active')) {
+                return;
+            }
+            Radzen.closePopup(id, instance, callback, e);
+        }
+        if (e.key === 'Tab' && parent && (popup.classList.contains('rz-dropdown-panel') || popup.classList.contains('rz-multiselect-panel'))) {
+            e.preventDefault();
+        }
+        if (e.key === 'Tab' && !e.shiftKey) {
+            var timepicker = popup.querySelector('.rz-timepicker');
+            if (timepicker) {
+                var focusable = Radzen.getFocusableElements(timepicker);
+                var last = focusable[focusable.length - 1];
+                if (last && document.activeElement === last) {
+                    Radzen.closePopup(id, instance, callback, e);
+                }
+            }
+        }
+    };
+    popup.addEventListener('keydown', popup.__escapeHandler, true);
   },
   closeAllPopups: function (e, id) {
     if (!Radzen.popups) return;
@@ -1354,9 +3304,22 @@ window.Radzen = {
     }
     Radzen.popups = [];
   },
-  closePopup: function (id, instance, callback, e) {
+  closePopup: function (id, instance, callback, e, preventFocusRestore) {
     var popup = document.getElementById(id);
     if (!popup) return;
+    if (popup.__contextMenuScrollHandler) {
+      document.removeEventListener('scroll', popup.__contextMenuScrollHandler, true);
+      delete popup.__contextMenuScrollHandler;
+      delete popup.__contextMenuTarget;
+    }
+    var popupInfo = (Radzen.popups || []).find(function (p) { return p.id === id; });
+    if (popupInfo && popupInfo.parent) {
+      Radzen.setPopupAriaExpanded(popupInfo.parent, id, false);
+      var combobox = popupInfo.parent.closest('[role="combobox"]');
+      if (combobox) {
+        combobox.removeAttribute('aria-activedescendant');
+      }
+    }
     if (popup.style.display == 'none') {
         var popups = Radzen.findPopup(id);
         if (popups.length > 1) {
@@ -1367,6 +3330,8 @@ window.Radzen = {
                     popup = popups[i];
                 }
             }
+        } else if (popups.length == 1 && popups[0].style.display != 'none') {
+            popup = popups[0];
         } else {
             return;
         }
@@ -1382,12 +3347,41 @@ window.Radzen = {
         Radzen[id + 'FZL'] = null;
       }
 
-      popup.onanimationend = function () {
+      var hidePopup = function () {
           popup.style.display = 'none';
           popup.onanimationend = null;
+          popup.onanimationcancel = null;
       }
+      popup.onanimationend = hidePopup;
+      popup.onanimationcancel = hidePopup;
       popup.classList.add("rz-close");
       popup.classList.remove("rz-open");
+      var closeAnimationRunning = popup.getAnimations
+          ? popup.getAnimations().some(function (a) { return a.animationName == 'rz-close'; })
+          : getComputedStyle(popup).animationName.indexOf('rz-close') != -1;
+      if (!closeAnimationRunning) {
+          hidePopup();
+      }
+    }
+    if (popup && popup.__escapeHandler) {
+        popup.removeEventListener('keydown', popup.__escapeHandler, true);
+        delete popup.__escapeHandler;
+    }
+    if (popup && popup.__viewportResizeHandler) {
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', popup.__viewportResizeHandler);
+        }
+        var wrapperToReset = popup.querySelector('.rz-dropdown-items-wrapper, .rz-multiselect-items-wrapper');
+        if (wrapperToReset && popup.__originalWrapperMaxHeight !== undefined) {
+            wrapperToReset.style.maxHeight = popup.__originalWrapperMaxHeight;
+        }
+        delete popup.__viewportResizeHandler;
+        delete popup.__originalWrapperMaxHeight;
+        delete popup.__originalPopupTop;
+    }
+    if (popup && popup.__contentResizeObserver) {
+        popup.__contentResizeObserver.disconnect();
+        delete popup.__contentResizeObserver;
     }
     document.removeEventListener('mousedown', Radzen[id]);
     window.removeEventListener('resize', Radzen[id]);
@@ -1395,31 +3389,39 @@ window.Radzen = {
 
     if (instance && callback) {
         if (callback.includes('RadzenTooltip')) {
-            try { instance.invokeMethodAsync(callback, null); } catch { }
+            try { suppressDisposed(instance.invokeMethodAsync(callback, null)); } catch { }
         } else {
-            try { instance.invokeMethodAsync(callback); } catch { }
+            try { suppressDisposed(instance.invokeMethodAsync(callback)); } catch { }
         }
     }
     Radzen.popups = (Radzen.popups || []).filter(function (obj) {
         return obj.id !== id;
     });
 
-    if (Radzen.activeElement && Radzen.activeElement == document.activeElement ||
+    var closedByOutsideMousedown = e && e.type == 'mousedown' && e.target && e.target.nodeType &&
+        popup && !popup.contains(e.target) &&
+        !(popupInfo && popupInfo.parent && popupInfo.parent.contains(e.target));
+
+    if (!preventFocusRestore && !closedByOutsideMousedown &&
+        (Radzen.activeElement && Radzen.activeElement == document.activeElement ||
         Radzen.activeElement && document.activeElement == document.body ||
+        Radzen.activeElement && popup && popup.contains(document.activeElement) ||
         Radzen.activeElement && document.activeElement &&
-            (document.activeElement.classList.contains('rz-dropdown-filter') || 
+            (document.activeElement.classList.contains('rz-dropdown-filter') ||
              document.activeElement.classList.contains('rz-lookup-search-input') ||
              document.activeElement.classList.contains('rz-multiselect-filter-container') ||
-             document.activeElement.closest('.rz-multiselect-filter-container') !== null)) {
+             document.activeElement.closest('.rz-multiselect-filter-container') !== null))) {
         setTimeout(function () {
             if (e && e.target && e.target.tabIndex != -1) {
                 Radzen.activeElement = e.target;
             }
-            if (Radzen.activeElement) {
+            if (Radzen.activeElement && (document.activeElement == null || document.activeElement == document.body || popup && popup.contains(document.activeElement))) {
                Radzen.activeElement.focus();
             }
             Radzen.activeElement = null;
         }, 100);
+    } else if (closedByOutsideMousedown) {
+        Radzen.activeElement = null;
     }
   },
   popupOpened: function (id) {
@@ -1441,9 +3443,41 @@ window.Radzen = {
   destroyPopup: function (id) {
     var popup = document.getElementById(id);
     if (popup) {
-      popup.parentNode.removeChild(popup);
+      if (popup.__contextMenuScrollHandler) {
+          document.removeEventListener('scroll', popup.__contextMenuScrollHandler, true);
+          delete popup.__contextMenuScrollHandler;
+          delete popup.__contextMenuTarget;
+      }
+      if (popup.__escapeHandler) {
+          popup.removeEventListener('keydown', popup.__escapeHandler, true);
+          delete popup.__escapeHandler;
+      }
+      if (popup.__viewportResizeHandler) {
+          if (window.visualViewport) {
+              window.visualViewport.removeEventListener('resize', popup.__viewportResizeHandler);
+          }
+          delete popup.__viewportResizeHandler;
+          delete popup.__originalWrapperMaxHeight;
+          delete popup.__originalPopupTop;
+      }
+      if (popup.__contentResizeObserver) {
+          popup.__contentResizeObserver.disconnect();
+          delete popup.__contentResizeObserver;
+      }
+      if (popup.__radzenHome && popup.__radzenHome.isConnected) {
+          popup.__radzenHome.appendChild(popup);
+      } else if (popup.parentNode === document.body) {
+          document.body.removeChild(popup);
+      }
+      delete popup.__radzenHome;
     }
     document.removeEventListener('mousedown', Radzen[id]);
+    document.removeEventListener('contextmenu', Radzen[id]);
+    window.removeEventListener('resize', Radzen[id]);
+    Radzen[id] = null;
+    Radzen.popups = (Radzen.popups || []).filter(function (obj) {
+        return obj.id !== id;
+    });
   },
   scrollDataGrid: function (e) {
     var scrollLeft =
@@ -1483,7 +3517,25 @@ window.Radzen = {
           first.focus();
       }
   },
-  openSideDialog: function (options) {
+  openSideDialog: function (options, dialogService) {
+      if (dialogService) {
+          Radzen.sideDialogService = dialogService;
+      }
+      if (!Radzen.sideDialogInvokerElement) {
+          var invoker = document.activeElement;
+          if (invoker && invoker !== document.body && !invoker.closest('.rz-dialog-side')) {
+              Radzen.sideDialogInvokerElement = invoker;
+          }
+      }
+      var sideDialog = document.querySelector('.rz-dialog-side');
+      if (sideDialog) {
+          sideDialog.removeEventListener('keydown', Radzen.focusTrap);
+          if (options.showMask) {
+              sideDialog.addEventListener('keydown', Radzen.focusTrap);
+          }
+          sideDialog.removeEventListener('keydown', Radzen.closeSideDialogOnEsc);
+          sideDialog.addEventListener('keydown', Radzen.closeSideDialogOnEsc);
+      }
       setTimeout(function () {
           if (options.autoFocusFirstElement) {
               var dialogs = document.querySelectorAll('.rz-dialog-side-content');
@@ -1492,6 +3544,29 @@ window.Radzen = {
               Radzen.focusFirstFocusableElement(lastDialog);
           }
       }, 500);
+  },
+  closeSideDialog: function () {
+      delete Radzen.sideDialogService;
+      var invoker = Radzen.sideDialogInvokerElement;
+      Radzen.sideDialogInvokerElement = null;
+      if (invoker && typeof invoker.focus === 'function' && document.body.contains(invoker)) {
+          invoker.focus();
+      }
+  },
+  closeSideDialogOnEsc: function (e) {
+      e = e || window.event;
+      var isEscape = "key" in e ? (e.key === "Escape" || e.key === "Esc") : (e.keyCode === 27);
+      if (isEscape && Radzen.sideDialogService) {
+          var popups = document.querySelectorAll('.rz-popup,.rz-overlaypanel');
+          for (var i = 0; i < popups.length; i++) {
+              if (popups[i].style.display != 'none') {
+                  return;
+              }
+          }
+          try {
+              Radzen.sideDialogService.invokeMethodAsync('DialogService.TryCloseSide', null);
+          } catch (ex) { }
+      }
   },
   createSideDialogResizer: function(handle, sideDialog, options) {
       const normalizeDir = (value) => {
@@ -1565,6 +3640,12 @@ window.Radzen = {
       };
   },
   openDialog: function (options, dialogService, dialog) {
+    if (!Radzen.dialogInvokerElement) {
+        var invoker = document.activeElement;
+        if (invoker && invoker !== document.body && !invoker.closest('.rz-dialog-content')) {
+            Radzen.dialogInvokerElement = invoker;
+        }
+    }
     if (Radzen.closeAllPopups) {
         Radzen.closeAllPopups();
     }
@@ -1576,6 +3657,15 @@ window.Radzen = {
       document.body.classList.add('no-scroll');
     }
 
+    var currentDialogs = document.querySelectorAll('.rz-dialog-content');
+    var currentDialog = currentDialogs.length ? currentDialogs[currentDialogs.length - 1] : null;
+    if (currentDialog) {
+        currentDialog.options = options;
+        var dialogRoot = currentDialog.closest('.rz-dialog') || currentDialog;
+        dialogRoot.removeEventListener('keydown', Radzen.focusTrap);
+        dialogRoot.addEventListener('keydown', Radzen.focusTrap);
+    }
+
     setTimeout(function () {
         var dialogs = document.querySelectorAll('.rz-dialog-content');
         if (dialogs.length == 0) return;
@@ -1583,33 +3673,110 @@ window.Radzen = {
 
         if (lastDialog) {
             lastDialog.options = options;
-            lastDialog.removeEventListener('keydown', Radzen.focusTrap);
-            lastDialog.addEventListener('keydown', Radzen.focusTrap);
 
             if (options.resizable) {
-                dialog.offsetWidth = lastDialog.parentElement.offsetWidth;
-                dialog.offsetHeight = lastDialog.parentElement.offsetHeight;
+                var dialogElement = lastDialog.parentElement;
+
+                dialog.offsetWidth = dialogElement.offsetWidth;
+                dialog.offsetHeight = dialogElement.offsetHeight;
+
+                var userResizing = false;
+
+                var pushSize = function () {
+                    if (!dialog) return;
+                    if (dialog.offsetWidth == dialogElement.offsetWidth &&
+                        dialog.offsetHeight == dialogElement.offsetHeight) return;
+
+                    dialog.offsetWidth = dialogElement.offsetWidth;
+                    dialog.offsetHeight = dialogElement.offsetHeight;
+
+                    dialog.invokeMethodAsync(
+                        'RadzenDialog.OnResize',
+                        dialogElement.offsetWidth,
+                        dialogElement.offsetHeight
+                    ).catch(function () { });
+                };
+
+                var stopTracking = function () {
+                    document.removeEventListener('pointermove', onPointerMove, true);
+                    document.removeEventListener('pointerup', onPointerUp, true);
+                    document.removeEventListener('pointercancel', onPointerUp, true);
+                };
+
+                var onPointerMove = function (e) {
+                    if (e.buttons === 1) {
+                        userResizing = true;
+                        return;
+                    }
+
+                    onPointerUp();
+                };
+
+                var onPointerUp = function () {
+                    stopTracking();
+                    if (!userResizing) return;
+                    userResizing = false;
+                    pushSize();
+                };
+
+                var onPointerDown = function (e) {
+                    if (e.button !== 0 || !e.isPrimary || e.target !== dialogElement) return;
+
+                    document.addEventListener('pointermove', onPointerMove, true);
+                    document.addEventListener('pointerup', onPointerUp, true);
+                    document.addEventListener('pointercancel', onPointerUp, true);
+                };
+
                 var dialogResize = function (e) {
                     if (!dialog) return;
-                    if (dialog.offsetWidth != e[0].target.offsetWidth || dialog.offsetHeight != e[0].target.offsetHeight) {
 
+                    if (!e[0].target.isConnected) {
+                        resizer.dispose();
+                        return;
+                    }
+
+                    if (!userResizing) {
                         dialog.offsetWidth = e[0].target.offsetWidth;
                         dialog.offsetHeight = e[0].target.offsetHeight;
-
-                        dialog.invokeMethodAsync(
-                            'RadzenDialog.OnResize',
-                            e[0].target.offsetWidth,
-                            e[0].target.offsetHeight
-                        );
+                        return;
                     }
+
+                    pushSize();
                 };
-                Radzen.dialogResizer = new ResizeObserver(dialogResize).observe(lastDialog.parentElement);
+
+                var resizeObserver = new ResizeObserver(dialogResize);
+                resizeObserver.observe(dialogElement);
+
+                dialogElement.addEventListener('pointerdown', onPointerDown);
+
+                var resizer = {
+                    disposed: false,
+                    dispose: function () {
+                        if (this.disposed) return;
+                        this.disposed = true;
+                        resizeObserver.disconnect();
+                        dialogElement.removeEventListener('pointerdown', onPointerDown);
+                        stopTracking();
+                        var index = Radzen.dialogResizers.indexOf(this);
+                        if (index != -1) {
+                            Radzen.dialogResizers.splice(index, 1);
+                        }
+                        if (Radzen.dialogResizer === this) {
+                            Radzen.dialogResizer = null;
+                        }
+                    },
+                    disconnect: function () { this.dispose(); }
+                };
+
+                Radzen.dialogResizers = Radzen.dialogResizers || [];
+                Radzen.dialogResizers.push(resizer);
+                Radzen.dialogResizer = resizer;
             }
 
             if (options.draggable) {
                 var dialogTitle = lastDialog.parentElement.querySelector('.rz-dialog-titlebar');
                 if (dialogTitle) {
-                    Radzen[dialogTitle] = function (e) {
+                    dialogTitle.dragHandler = function (e) {
                         var rect = lastDialog.parentElement.getBoundingClientRect();
                         var offsetX = e.clientX - rect.left;
                         var offsetY = e.clientY - rect.top;
@@ -1621,7 +3788,7 @@ window.Radzen = {
                             lastDialog.parentElement.style.left = left + 'px';
                             lastDialog.parentElement.style.top = top + 'px';
 
-                            dialog.invokeMethodAsync('RadzenDialog.OnDrag', top, left);
+                            try { suppressDisposed(dialog.invokeMethodAsync('RadzenDialog.OnDrag', top, left)); } catch { }
                         };
 
                         var stop = function () {
@@ -1633,7 +3800,7 @@ window.Radzen = {
                         document.addEventListener('mouseup', stop);
                     };
 
-                    dialogTitle.addEventListener('mousedown', Radzen[dialogTitle]);
+                    dialogTitle.addEventListener('mousedown', dialogTitle.dragHandler);
                 }
             }
 
@@ -1649,6 +3816,11 @@ window.Radzen = {
     }
   },
   closeDialog: function () {
+    var resizers = (Radzen.dialogResizers || []).slice();
+    for (var i = 0; i < resizers.length; i++) {
+        resizers[i].dispose();
+    }
+    Radzen.dialogResizers = [];
     Radzen.dialogResizer = null;
     document.body.classList.remove('no-scroll');
     var dialogs = document.querySelectorAll('.rz-dialog-content');
@@ -1656,16 +3828,23 @@ window.Radzen = {
     var lastDialog = dialogs.length && dialogs[dialogs.length - 1];
     if (lastDialog) {
         var dialogTitle = lastDialog.parentElement.querySelector('.rz-dialog-titlebar');
-        if (dialogTitle) {
-            dialogTitle.removeEventListener('mousedown', Radzen[dialogTitle]);
-            Radzen[dialogTitle] = null;
-            delete Radzen[dialogTitle];
+        if (dialogTitle && dialogTitle.dragHandler) {
+            dialogTitle.removeEventListener('mousedown', dialogTitle.dragHandler);
+            dialogTitle.dragHandler = null;
         }
     }
 
     if (dialogs.length <= 1) {
         document.removeEventListener('keydown', Radzen.closePopupOrDialog);
         delete Radzen.dialogService;
+        Radzen.restoreDialogInvokerFocus();
+    }
+  },
+  restoreDialogInvokerFocus: function () {
+    var invoker = Radzen.dialogInvokerElement;
+    Radzen.dialogInvokerElement = null;
+    if (invoker && typeof invoker.focus === 'function' && document.body.contains(invoker)) {
+        invoker.focus();
     }
   },
   disableKeydown: function (e) {
@@ -1728,16 +3907,18 @@ window.Radzen = {
           var lastDialog = dialogs[dialogs.length - 1];
 
           if (lastDialog && lastDialog.options && lastDialog.options.closeDialogOnEsc) {
-              Radzen.dialogService.invokeMethodAsync('DialogService.Close', null);
-
-              if (dialogs.length <= 1) {
-                  document.removeEventListener('keydown', Radzen.closePopupOrDialog);
-                  delete Radzen.dialogService;
-                  var layout = document.querySelector('.rz-layout');
-                  if (layout) {
-                      layout.removeEventListener('keydown', Radzen.disableKeydown);
-                  }
-              }
+              try {
+                  Radzen.dialogService.invokeMethodAsync('DialogService.TryClose', null).then(function(closed) {
+                      if (closed && dialogs.length <= 1) {
+                          document.removeEventListener('keydown', Radzen.closePopupOrDialog);
+                          delete Radzen.dialogService;
+                          var layout = document.querySelector('.rz-layout');
+                          if (layout) {
+                              layout.removeEventListener('keydown', Radzen.disableKeydown);
+                          }
+                      }
+                  });
+              } catch (e) { }
           }
       }
   },
@@ -1763,6 +3944,46 @@ window.Radzen = {
     if (input) {
       input.value = value;
     }
+  },
+  getSelectionRange: function (arg) {
+    var input =
+      arg instanceof Element || arg instanceof HTMLDocument
+        ? arg
+        : document.getElementById(arg);
+    if (!input) return null;
+    try {
+      if (input.selectionStart === null || input.selectionStart === undefined) return null;
+      return [input.selectionStart, input.selectionEnd];
+    } catch (e) {
+      return null;
+    }
+  },
+  setSelectionRange: function (arg, start, end) {
+    var input =
+      arg instanceof Element || arg instanceof HTMLDocument
+        ? arg
+        : document.getElementById(arg);
+    if (!input) return;
+    var max = input.value ? input.value.length : 0;
+    var s = Math.max(0, Math.min(start, max));
+    var e = Math.max(0, Math.min(end, max));
+    try {
+      if (typeof input.setSelectionRange === 'function') {
+        input.setSelectionRange(s, e);
+      } else {
+        input.selectionStart = s;
+        input.selectionEnd = e;
+      }
+    } catch (ex) { }
+  },
+  isScrolledToBottom: function (arg, threshold) {
+    var element =
+      arg instanceof Element || arg instanceof HTMLDocument
+        ? arg
+        : document.getElementById(arg);
+    if (!element) return false;
+    var offset = typeof threshold === 'number' ? threshold : 0;
+    return element.scrollTop + element.clientHeight >= element.scrollHeight - offset;
   },
   blur: function (el, e) { 
     if (el) {
@@ -1829,12 +4050,58 @@ window.Radzen = {
 
     return readAsDataURL(fileInput);
   },
+  closeMenuItem: function (item) {
+    if (!item || !item.classList || !item.classList.contains('rz-navigation-item-active')) {
+      return;
+    }
+
+    item.classList.remove('rz-navigation-item-active');
+
+    var wrapper = item.querySelector('.rz-navigation-item-wrapper');
+    if (wrapper) {
+      wrapper.classList.remove('rz-navigation-item-wrapper-active');
+    }
+
+    var children = item.querySelector('.rz-navigation-menu');
+    if (children) {
+      item.setAttribute('aria-expanded', false);
+      children.onanimationend = function () {
+        children.style.display = 'none';
+        children.style.insetInlineStart = '';
+        children.onanimationend = null;
+      };
+      children.classList.remove('rz-open');
+      children.classList.add('rz-close');
+
+      children.querySelectorAll('.rz-navigation-item-active').forEach(function (nested) {
+        Radzen.closeMenuItem(nested);
+      });
+    }
+
+    var icon = item.querySelector('.rz-navigation-item-icon-children');
+    if (icon) {
+      icon.classList.remove('rz-state-expanded');
+      icon.classList.add('rz-state-collapsed');
+    }
+  },
   toggleMenuItem: function (target, event, defaultActive, clickToOpen) {
+    if (!target) return;
+
     var item = target.closest('.rz-navigation-item');
+
+    if (!item) return;
 
     var active = defaultActive != undefined ? defaultActive : !item.classList.contains('rz-navigation-item-active');
 
     function toggle(active) {
+      if (active && item.parentElement) {
+        Array.prototype.forEach.call(item.parentElement.children, function (sibling) {
+          if (sibling !== item) {
+            Radzen.closeMenuItem(sibling);
+          }
+        });
+      }
+
       item.classList.toggle('rz-navigation-item-active', active);
 
       target.classList.toggle('rz-navigation-item-wrapper-active', active);
@@ -1842,14 +4109,59 @@ window.Radzen = {
       var children = item.querySelector('.rz-navigation-menu');
 
       if (children) {
+        item.setAttribute('aria-expanded', active);
         if (active) {
           children.onanimationend = null;
           children.style.display = '';
           children.classList.add('rz-open');
           children.classList.remove('rz-close');
+
+          var isRtl = getComputedStyle(item).direction === 'rtl';
+          var round = function (value) { return Math.round(value * 1000) / 1000; };
+          var el = item.parentElement;
+          var scrollParent = null;
+          while (el && el !== document.body) {
+            var s = getComputedStyle(el);
+            if (s.overflowX === 'auto' || s.overflowX === 'scroll' || s.overflowX === 'hidden') {
+              scrollParent = el;
+              break;
+            }
+            el = el.parentElement;
+          }
+
+          if (children.hasAttribute('data-flyout')) {
+            children.removeAttribute('data-flyout-flip');
+            var childRect = children.getBoundingClientRect();
+            var itemRect = item.getBoundingClientRect();
+            if (isRtl) {
+              var leftBoundary = scrollParent ? scrollParent.getBoundingClientRect().left : 0;
+              if (round(itemRect.left - childRect.width) < round(leftBoundary)) {
+                children.setAttribute('data-flyout-flip', '');
+              }
+            } else {
+              var rightBoundary = scrollParent ? scrollParent.getBoundingClientRect().right : document.documentElement.clientWidth;
+              if (round(itemRect.right + childRect.width) > round(rightBoundary)) {
+                children.setAttribute('data-flyout-flip', '');
+              }
+            }
+          }
+
+          // Shift dropdown left/right if it overflows the scroll parent or viewport
+          children.style.insetInlineStart = children.style.insetInlineStart || '';
+          var childRect = children.getBoundingClientRect();
+          var rightBoundary = scrollParent ? scrollParent.getBoundingClientRect().right : document.documentElement.clientWidth;
+          var leftBoundary = scrollParent ? scrollParent.getBoundingClientRect().left : 0;
+          if (!isRtl && round(childRect.right) > round(rightBoundary)) {
+            var offset = parseFloat(children.style.insetInlineStart) || 0;
+            children.style.insetInlineStart = (offset + rightBoundary - childRect.right) + 'px';
+          } else if (isRtl && round(childRect.left) < round(leftBoundary)) {
+            var offset = parseFloat(children.style.insetInlineStart) || 0;
+            children.style.insetInlineStart = (offset + leftBoundary - childRect.left) + 'px';
+          }
         } else {
           children.onanimationend = function () {
             children.style.display = 'none';
+            children.style.insetInlineStart = '';
             children.onanimationend = null;
           }
           children.classList.remove('rz-open');
@@ -1895,10 +4207,505 @@ window.Radzen = {
     delete ref.mouseMoveHandler;
     ref.removeEventListener('click', ref.clickHandler);
     delete ref.clickHandler;
+    ref.removeEventListener('wheel', ref.wheelHandler);
+    delete ref.wheelHandler;
+    if (ref.legendEnterHandler) {
+      ref.removeEventListener('mouseenter', ref.legendEnterHandler, true);
+      delete ref.legendEnterHandler;
+    }
+    if (ref.legendLeaveHandler) {
+      ref.removeEventListener('mouseleave', ref.legendLeaveHandler, true);
+      delete ref.legendLeaveHandler;
+    }
+    if (ref.scrollbarMoveHandler) {
+      document.removeEventListener('mousemove', ref.scrollbarMoveHandler);
+      delete ref.scrollbarMoveHandler;
+    }
+    if (ref.scrollbarUpHandler) {
+      document.removeEventListener('mouseup', ref.scrollbarUpHandler);
+      delete ref.scrollbarUpHandler;
+    }
+    if (ref.scrollbarTouchMoveHandler) {
+      document.removeEventListener('touchmove', ref.scrollbarTouchMoveHandler);
+      delete ref.scrollbarTouchMoveHandler;
+    }
+    if (ref.scrollbarTouchEndHandler) {
+      document.removeEventListener('touchend', ref.scrollbarTouchEndHandler);
+      delete ref.scrollbarTouchEndHandler;
+    }
+    if (ref.touchStartHandler) {
+      ref.removeEventListener('touchstart', ref.touchStartHandler);
+      delete ref.touchStartHandler;
+    }
+    if (ref.touchMoveHandler) {
+      ref.removeEventListener('touchmove', ref.touchMoveHandler);
+      delete ref.touchMoveHandler;
+    }
+    if (ref.touchEndHandler) {
+      ref.removeEventListener('touchend', ref.touchEndHandler);
+      delete ref.touchEndHandler;
+    }
+    if (ref._chartRTLObserver) {
+      ref._chartRTLObserver.disconnect();
+      delete ref._chartRTLObserver;
+    }
+    if (ref.observeLegend) {
+      ref.observeLegend(false);
+      delete ref.observeLegend;
+    }
     this.destroyResizable(ref);
   },
+  observeChartLegend: function (ref, observe) {
+    if (ref && ref.observeLegend) {
+      ref.observeLegend(observe);
+    }
+  },
+  createRangeNavigator: function (ref, instance) {
+    if (!ref) return [0, 0];
+
+    var width = ref.offsetWidth;
+    var height = ref.offsetHeight;
+
+    var dragging = null;
+    var dragStartX = 0;
+    var dragStartStart = 0;
+    var dragStartEnd = 0;
+    var currentStart = 0;
+    var currentEnd = 1;
+    var minRange = 0.01;
+    function isRTL() {
+      return document.documentElement.dir === 'rtl';
+    }
+
+    function getPositionFromEvent(e) {
+      var rect = ref.getBoundingClientRect();
+      var x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      if (isRTL()) x = rect.width - x;
+      return Math.max(0, Math.min(1, x / rect.width));
+    }
+
+    function readPositionFromDOM() {
+      var w = ref.querySelector('.rz-range-nav-window');
+      if (w) {
+        var wRect = w.getBoundingClientRect();
+        var rRect = ref.getBoundingClientRect();
+        if (rRect.width > 0) {
+          if (isRTL()) {
+            currentStart = (rRect.right - wRect.right) / rRect.width;
+            currentEnd = (rRect.right - wRect.left) / rRect.width;
+          } else {
+            currentStart = (wRect.left - rRect.left) / rRect.width;
+            currentEnd = (wRect.right - rRect.left) / rRect.width;
+          }
+        }
+      }
+    }
+
+    var snapThreshold = 0.01;
+    function snap(v) { return v < snapThreshold ? 0 : v > 1 - snapThreshold ? 1 : v; }
+
+    // Label state — set by Radzen.updateRangeNavigatorLabels
+    ref.navLabelIsDate = false;
+    ref.navLabelInputStart = 0;
+    ref.navLabelInputEnd = 0;
+
+    function formatLabel(fraction) {
+        var inputStart = ref.navLabelInputStart;
+        var inputEnd = ref.navLabelInputEnd;
+        if (inputStart === inputEnd) return '';
+
+        var value = inputStart + fraction * (inputEnd - inputStart);
+
+        if (ref.navLabelIsDate) {
+            // .NET ticks -> JavaScript Date
+            var ticksToMs = value / 10000 - 62135596800000;
+            var d = new Date(ticksToMs);
+
+            var format = ref.handleLabelFormatString || "{0:MM/dd/yyyy}";
+
+            // Extract the format from "{0:MM/dd/yyyy}"
+            format = format.replace(/^\{0:/, '').replace(/\}$/, '');
+
+            var month = d.getMonth();
+            var monthNumber = month + 1;
+            var day = d.getDate();
+            var hours24 = d.getHours();
+            var hours12 = hours24 % 12 || 12;
+
+            var monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            var monthNamesShort = [
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            ];
+
+            var year = d.getFullYear();
+
+            // Single-pass tokenizer. Quoted literals are preserved
+            return format.replace(
+                /'([^']*)'|yyyy|yy|MMMM|MMM|MM|M|dd|d|HH|hh|mm|ss|tt/g,
+                function (match, literal) {
+                    if (literal !== undefined) {
+                        return literal;
+                    }
+
+                    switch (match) {
+                        case 'yyyy':
+                            return String(year);
+
+                        case 'yy':
+                            return String(year % 100).padStart(2, '0');
+
+                        case 'MMMM':
+                            return monthNames[month];
+
+                        case 'MMM':
+                            return monthNamesShort[month];
+
+                        case 'MM':
+                            return String(monthNumber).padStart(2, '0');
+
+                        case 'M':
+                            return String(monthNumber);
+
+                        case 'dd':
+                            return String(day).padStart(2, '0');
+
+                        case 'd':
+                            return String(day);
+
+                        case 'HH':
+                            return String(hours24).padStart(2, '0');
+
+                        case 'hh':
+                            return String(hours12).padStart(2, '0');
+
+                        case 'mm':
+                            return String(d.getMinutes()).padStart(2, '0');
+
+                        case 'ss':
+                            return String(d.getSeconds()).padStart(2, '0');
+
+                        case 'tt':
+                            return hours24 < 12 ? 'AM' : 'PM';
+
+                        default:
+                            return match;
+                    }
+                }
+            );
+        }
+
+        return Math.round(value).toString();
+    }
+
+    function setLabelText(el, text) {
+      if (el.firstChild && el.firstChild.nodeType === 3) {
+        el.firstChild.nodeValue = text;
+      } else {
+        el.textContent = text;
+      }
+    }
+
+    function updateLabels(start, end) {
+      if (!ref.navLabelInputEnd) return;
+      var labels = ref.querySelectorAll('.rz-range-nav-label');
+      if (labels.length >= 2) {
+        setLabelText(labels[0], formatLabel(start));
+        setLabelText(labels[1], formatLabel(end));
+        // Flip label direction when near edges
+        labels[0].className = 'rz-range-nav-label ' + (start < 0.1 ? 'rz-range-nav-label-end' : 'rz-range-nav-label-start');
+        labels[1].className = 'rz-range-nav-label ' + (end > 0.9 ? 'rz-range-nav-label-start' : 'rz-range-nav-label-end');
+      }
+    }
+
+    function updateDOM(start, end) {
+      currentStart = snap(start);
+      currentEnd = snap(end);
+      start = currentStart;
+      end = currentEnd;
+      var win = ref.querySelector('.rz-range-nav-window');
+      var shadeLeft = ref.querySelector('.rz-range-nav-shade-start');
+      var shadeRight = ref.querySelector('.rz-range-nav-shade-end');
+      if (win) {
+        if (isRTL()) {
+          win.style.right = (start * 100) + '%';
+          win.style.left = 'auto';
+        } else {
+          win.style.left = (start * 100) + '%';
+          win.style.right = 'auto';
+        }
+        win.style.width = ((end - start) * 100) + '%';
+      }
+      if (shadeLeft) shadeLeft.style.width = (start * 100) + '%';
+      if (shadeRight) shadeRight.style.width = ((1 - end) * 100) + '%';
+      updateLabels(start, end);
+    }
+
+    ref.navTooltipPoints = [];
+
+    ref.navHideTooltip = function () {
+      var tooltip = ref.querySelector('.rz-range-nav-tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+    };
+
+    function nearestPoint(pos) {
+      var points = ref.navTooltipPoints;
+      var lo = 0, hi = points.length - 1;
+      while (lo < hi) {
+        var mid = (lo + hi) >> 1;
+        if (points[mid].x < pos) {
+          lo = mid + 1;
+        } else {
+          hi = mid;
+        }
+      }
+      if (lo > 0 && pos - points[lo - 1].x < points[lo].x - pos) lo--;
+      return points[lo];
+    }
+
+    function isOverTrack(e) {
+      var rect = ref.getBoundingClientRect();
+      return e.clientY <= rect.bottom - (parseFloat(getComputedStyle(ref).paddingBottom) || 0);
+    }
+
+    function clipBounds() {
+      var bounds = { top: 0, left: 0, right: document.documentElement.clientWidth };
+      for (var el = ref.parentElement; el && el !== document.body; el = el.parentElement) {
+        var style = getComputedStyle(el);
+        var rect = el.getBoundingClientRect();
+        if (style.overflowY !== 'visible') {
+          bounds.top = Math.max(bounds.top, rect.top);
+        }
+        if (style.overflowX !== 'visible') {
+          bounds.left = Math.max(bounds.left, rect.left);
+          bounds.right = Math.min(bounds.right, rect.right);
+        }
+        if (style.position === 'fixed') {
+          break;
+        }
+      }
+      return bounds;
+    }
+
+    function positionTooltip(tooltip, point) {
+      var track = ref.querySelector('svg');
+      tooltip.style.insetInlineStart = (point.x * 100) + '%';
+      tooltip.style.insetBlockStart = (point.y * (track ? track.clientHeight : 0)) + 'px';
+
+      var content = tooltip.querySelector('.rz-chart-tooltip-content');
+      var popup = content.parentElement;
+      var bounds = clipBounds();
+      popup.style.left = '';
+      popup.classList.remove('rz-bottom-chart-tooltip');
+      popup.classList.add('rz-top-chart-tooltip');
+      if (content.getBoundingClientRect().top < bounds.top) {
+        popup.classList.remove('rz-top-chart-tooltip');
+        popup.classList.add('rz-bottom-chart-tooltip');
+      }
+
+      var rect = popup.getBoundingClientRect();
+      if (rect.left < bounds.left) {
+        popup.style.left = (bounds.left - rect.left) + 'px';
+      } else if (rect.right > bounds.right) {
+        popup.style.left = (bounds.right - rect.right) + 'px';
+      }
+    }
+
+    var tooltipPoint = null;
+
+    ref.navHover = function (e) {
+      if (!ref.navTooltipPoints.length) return;
+
+      var tooltip = ref.querySelector('.rz-range-nav-tooltip');
+      if (!tooltip || dragging || !isOverTrack(e)) {
+        ref.navHideTooltip();
+        return;
+      }
+      var point = nearestPoint(getPositionFromEvent(e));
+      var wasHidden = tooltip.style.display === 'none';
+      var content = tooltip.querySelector('.rz-chart-tooltip-content');
+
+      if (point !== tooltipPoint || wasHidden) {
+        tooltipPoint = point;
+        tooltip.querySelector('.rz-chart-tooltip-title').textContent = point.category;
+        tooltip.querySelector('.rz-chart-tooltip-item-value').textContent = point.value;
+        tooltip.style.setProperty('--rz-series-color', point.color || 'currentColor');
+        content.style.border = '1px solid ' + getComputedStyle(tooltip.querySelector('.rz-active-point-dot')).fill;
+      }
+
+      tooltip.style.display = '';
+      positionTooltip(tooltip, point);
+
+      if (wasHidden) {
+        content.classList.remove('rz-chart-tooltip-enter');
+        void content.offsetWidth;
+        content.classList.add('rz-chart-tooltip-enter');
+      }
+    };
+
+    function notifyBlazor(start, end) {
+      instance.invokeMethodAsync('OnNavigatorDrag', snap(start), snap(end)).catch(function (ex) {
+        console.error('RangeNav invoke error:', ex);
+      });
+    }
+
+    readPositionFromDOM();
+
+    ref.navMouseDown = function (e) {
+      ref.navHideTooltip();
+      // Always read fresh position from DOM on mousedown
+      readPositionFromDOM();
+
+      var pos = getPositionFromEvent(e);
+      var handleZone = 12 / (ref.offsetWidth || 1);
+      var winRange = currentEnd - currentStart;
+
+      if (pos >= currentStart - handleZone && pos <= currentEnd + handleZone) {
+        var distToLeft = Math.abs(pos - currentStart);
+        var distToRight = Math.abs(pos - currentEnd);
+
+        if (winRange < handleZone * 3) {
+          dragging = distToLeft <= distToRight ? 'left' : 'right';
+        } else if (distToLeft <= handleZone) {
+          dragging = 'left';
+        } else if (distToRight <= handleZone) {
+          dragging = 'right';
+        } else {
+          dragging = 'pan';
+        }
+      } else {
+        // Click on shade: center selection at click position
+        var halfRange = winRange / 2;
+        var newStart = Math.max(0, Math.min(1 - winRange, pos - halfRange));
+        var newEnd = newStart + winRange;
+        updateDOM(newStart, newEnd);
+        notifyBlazor(newStart, newEnd);
+        return;
+      }
+
+      if (dragging) {
+        e.preventDefault();
+        dragStartX = (e.touches ? e.touches[0].clientX : e.clientX);
+        dragStartStart = currentStart;
+        dragStartEnd = currentEnd;
+      }
+    };
+
+    ref.navMouseMove = function (e) {
+      if (!dragging) return;
+      e.preventDefault();
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var dx = clientX - dragStartX;
+      if (isRTL()) dx = -dx;
+      var refWidth = ref.offsetWidth;
+      if (refWidth <= 0) return;
+      var delta = dx / refWidth;
+
+      var newStart = dragStartStart;
+      var newEnd = dragStartEnd;
+
+      if (dragging === 'left') {
+        newStart = Math.max(0, Math.min(dragStartEnd - minRange, dragStartStart + delta));
+      } else if (dragging === 'right') {
+        newEnd = Math.max(dragStartStart + minRange, Math.min(1, dragStartEnd + delta));
+      } else if (dragging === 'pan') {
+        var range = dragStartEnd - dragStartStart;
+        newStart = dragStartStart + delta;
+        newEnd = newStart + range;
+        if (newStart < 0) { newStart = 0; newEnd = range; }
+        if (newEnd > 1) { newEnd = 1; newStart = 1 - range; }
+      }
+
+      updateDOM(newStart, newEnd);
+    };
+
+    ref.navMouseUp = function () {
+      if (dragging) {
+        notifyBlazor(currentStart, currentEnd);
+      }
+      dragging = null;
+    };
+
+    ref.addEventListener('mousedown', ref.navMouseDown);
+    ref.addEventListener('touchstart', ref.navMouseDown, { passive: false });
+    ref.addEventListener('mousemove', ref.navHover);
+    ref.addEventListener('mouseleave', ref.navHideTooltip);
+    document.addEventListener('mousemove', ref.navMouseMove);
+    document.addEventListener('touchmove', ref.navMouseMove, { passive: false });
+    document.addEventListener('mouseup', ref.navMouseUp);
+    document.addEventListener('touchend', ref.navMouseUp);
+
+    ref.navResizeObserver = new ResizeObserver(function (entries) {
+      for (var entry of entries) {
+        var w = entry.contentRect.width;
+        var h = entry.contentRect.height;
+        if (w > 0) {
+          try { suppressDisposed(instance.invokeMethodAsync('OnResize', w, h)); } catch (ex) {}
+        }
+      }
+    });
+    ref.navResizeObserver.observe(ref);
+
+    ref._radzenDispose = function () {
+      if (ref.navMouseDown) {
+        ref.removeEventListener('mousedown', ref.navMouseDown);
+        ref.removeEventListener('touchstart', ref.navMouseDown);
+        delete ref.navMouseDown;
+      }
+      if (ref.navHover) {
+        ref.removeEventListener('mousemove', ref.navHover);
+        ref.removeEventListener('mouseleave', ref.navHideTooltip);
+        delete ref.navHover;
+        delete ref.navHideTooltip;
+      }
+      if (ref.navMouseMove) {
+        document.removeEventListener('mousemove', ref.navMouseMove);
+        document.removeEventListener('touchmove', ref.navMouseMove);
+        delete ref.navMouseMove;
+      }
+      if (ref.navMouseUp) {
+        document.removeEventListener('mouseup', ref.navMouseUp);
+        document.removeEventListener('touchend', ref.navMouseUp);
+        delete ref.navMouseUp;
+      }
+      if (ref.navResizeObserver) {
+        ref.navResizeObserver.disconnect();
+        delete ref.navResizeObserver;
+      }
+    };
+    return [width, height];
+  },
+
+    updateRangeNavigatorLabels: function (ref, isDate, inputStart, inputEnd, handleLabelFormatString) {
+        if (!ref) return;
+        ref.navLabelIsDate = isDate;
+        ref.navLabelInputStart = inputStart;
+        ref.navLabelInputEnd = inputEnd;
+        ref.handleLabelFormatString = handleLabelFormatString;
+    },
+
+    updateRangeNavigatorTooltip: function (ref, points) {
+        if (!ref) return;
+        ref.navTooltipPoints = points || [];
+        if (!ref.navTooltipPoints.length && ref.navHideTooltip) ref.navHideTooltip();
+    },
+
   destroyGauge: function (ref) {
+    if (ref._gaugeRTLObserver) {
+      ref._gaugeRTLObserver.disconnect();
+      delete ref._gaugeRTLObserver;
+    }
     this.destroyResizable(ref);
+  },
+  disposeElement: function (ref) {
+    if (ref && ref._radzenDispose) {
+      ref._radzenDispose();
+      delete ref._radzenDispose;
+    }
   },
   destroyResizable: function (ref) {
     if (ref.resizeObserver) {
@@ -1914,7 +4721,7 @@ window.Radzen = {
     ref.resizeHandler = function () {
       var rect = ref.getBoundingClientRect();
 
-      instance.invokeMethodAsync('Resize', rect.width, rect.height);
+      try { suppressDisposed(instance.invokeMethodAsync('Resize', rect.width, rect.height)); } catch { }
     };
 
     if (window.ResizeObserver) {
@@ -1924,66 +4731,451 @@ window.Radzen = {
       window.addEventListener('resize', ref.resizeHandler);
     }
 
+    var self = this;
+    ref._radzenDispose = function () { self.destroyResizable(ref); };
     var rect = ref.getBoundingClientRect();
-
-    return {width: rect.width, height: rect.height};
+    return { width: rect.width, height: rect.height };
   },
-  createChart: function (ref, instance) {
+  chartToSvg: function (ref) {
+    var svg = ref && ref.querySelector(':scope > svg');
+    if (!svg) return '';
+
+    var clone = svg.cloneNode(true);
+    var props = ['fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap',
+      'stroke-linejoin', 'opacity', 'font-size', 'font-family', 'font-weight', 'font-variant-numeric',
+      'text-anchor', 'dominant-baseline', 'stop-color', 'stop-opacity'];
+    var bake = function (source, target) {
+      var computed = getComputedStyle(source);
+      var style = '';
+      for (var i = 0; i < props.length; i++) {
+        var value = computed.getPropertyValue(props[i]);
+        if (value && value !== 'none' || props[i] === 'fill' || props[i] === 'stroke') {
+          style += props[i] + ':' + value + ';';
+        }
+      }
+      target.setAttribute('style', style);
+    };
+    var sources = svg.querySelectorAll('*');
+    var targets = clone.querySelectorAll('*');
+    for (var i = 0; i < sources.length; i++) {
+      bake(sources[i], targets[i]);
+    }
+
+    var rect = svg.getBoundingClientRect();
+    clone.setAttribute('width', rect.width);
+    clone.setAttribute('height', rect.height);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    return new XMLSerializer().serializeToString(clone);
+  },
+  svgToPng: async function (svg, width, height) {
+    if (!svg) return null;
+
+    var svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    var img = new Image();
+    await new Promise(function (resolve, reject) {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = svgUrl;
+    });
+
+    var naturalWidth = img.naturalWidth || img.width;
+    var naturalHeight = img.naturalHeight || img.height;
+    var canvas = document.createElement('canvas');
+    if (width > 0 || height > 0) {
+      canvas.width = Math.round(width > 0 ? width : height * naturalWidth / naturalHeight);
+      canvas.height = Math.round(height > 0 ? height : width * naturalHeight / naturalWidth);
+    } else {
+      var scale = Math.max(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(naturalWidth * scale);
+      canvas.height = Math.round(naturalHeight * scale);
+    }
+    var ctx = canvas.getContext('2d');
+    var background = getComputedStyle(document.body).backgroundColor;
+    if (background && background !== 'rgba(0, 0, 0, 0)') {
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    return await new Promise(function (resolve) {
+      canvas.toBlob(resolve, 'image/png');
+    });
+  },
+  downloadSvgAsPng: async function (svg, fileName, width, height) {
+    var blob = await this.svgToPng(svg, width, height);
+    if (blob) {
+      this.downloadFile(fileName, blob, 'image/png');
+    }
+  },
+  createChart: function (ref, instance, mouseMoveInterval) {
     var inside = false;
-    ref.mouseMoveHandler = this.throttle(function (e) {
+    var interval = mouseMoveInterval || 0;
+    var lastDispatch = 0;
+    var pendingMove = null;
+    var moveRafId = null;
+
+    function dispatchMouseMove() {
+      moveRafId = null;
+      if (!pendingMove) return;
+      var now = performance.now();
+      if (interval > 0 && now - lastDispatch < interval) {
+        moveRafId = requestAnimationFrame(dispatchMouseMove);
+        return;
+      }
+      lastDispatch = now;
+      var move = pendingMove;
+      pendingMove = null;
+      try { suppressDisposed(instance.invokeMethodAsync('MouseMove', move.x, move.y)); } catch { }
+    }
+
+    ref.mouseMoveHandler = function (e) {
       if (inside) {
         var rect = ref.getBoundingClientRect();
-        var x = e.clientX - rect.left;
-        var y = e.clientY - rect.top;
-        instance.invokeMethodAsync('MouseMove', x, y);
-     }
-    }, 100);
+        pendingMove = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        if (!moveRafId) {
+          moveRafId = requestAnimationFrame(dispatchMouseMove);
+        }
+      }
+    };
     ref.mouseEnterHandler = function () {
         inside = true;
     };
+    function leave() {
+      inside = false;
+      pendingMove = null;
+      if (moveRafId) {
+        cancelAnimationFrame(moveRafId);
+        moveRafId = null;
+      }
+      try { suppressDisposed(instance.invokeMethodAsync('MouseMove', -1, -1)); } catch { }
+    }
+
     ref.mouseLeaveHandler = function (e) {
-        if (e.relatedTarget && (e.relatedTarget.matches('.rz-chart-tooltip') || e.relatedTarget.closest('.rz-chart-tooltip'))) {
+        var tooltip = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rz-chart-tooltip');
+        if (tooltip) {
+            tooltip.addEventListener('mouseleave', function (te) {
+                if (inside && !(te.relatedTarget && ref.contains(te.relatedTarget))) {
+                    leave();
+                }
+            }, { once: true });
             return;
         }
-        inside = false;
-        instance.invokeMethodAsync('MouseMove', -1, -1);
+        leave();
     };
     ref.clickHandler = function (e) {
       var rect = ref.getBoundingClientRect();
       var x = e.clientX - rect.left;
       var y = e.clientY - rect.top;
-      if (!e.target.closest('.rz-marker')) {
-        instance.invokeMethodAsync('Click', x, y);
+      if (!e.target.closest('.rz-marker') && !e.target.closest('.rz-legend-item')) {
+        try { suppressDisposed(instance.invokeMethodAsync('Click', x, y)); } catch { }
       }
+    };
+
+    var zoomPanBusy = false;
+    var pendingPan = null;
+    var pendingWheelX = 0;
+    var pendingWheelSteps = 0;
+
+    function flushZoomPan() {
+      if (zoomPanBusy) return;
+      var promise;
+      if (pendingWheelSteps !== 0) {
+        var steps = pendingWheelSteps;
+        var wheelX = pendingWheelX;
+        pendingWheelSteps = 0;
+        try { promise = instance.invokeMethodAsync('OnWheel', wheelX, steps); } catch { return; }
+      } else if (pendingPan !== null) {
+        var position = pendingPan;
+        pendingPan = null;
+        try { promise = instance.invokeMethodAsync('OnPan', position); } catch { return; }
+      } else {
+        return;
+      }
+      zoomPanBusy = true;
+      var done = function () { zoomPanBusy = false; flushZoomPan(); };
+      if (promise && typeof promise.then === 'function') {
+        promise.then(done, done);
+      } else {
+        done();
+      }
+    }
+
+    function queuePan(position) {
+      pendingPan = position;
+      flushZoomPan();
+    }
+
+    function queueWheel(x, steps) {
+      pendingWheelX = x;
+      pendingWheelSteps += steps;
+      flushZoomPan();
+    }
+
+    ref.wheelHandler = function (e) {
+      if (!inside || ref.dataset.allowZoom !== 'true') return;
+      var delta = e.deltaY > 0 ? 1 : -1;
+      var range = parseFloat(ref.dataset.zoomEnd) - parseFloat(ref.dataset.zoomStart);
+      if (isNaN(range)) range = 1;
+      if (delta < 0 ? range <= 0.01 + 1e-6 : range >= 1 - 1e-6) return;
+      e.preventDefault();
+      var rect = ref.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      queueWheel(x, delta);
     };
 
     ref.addEventListener('mouseenter', ref.mouseEnterHandler);
     ref.addEventListener('mouseleave', ref.mouseLeaveHandler);
     ref.addEventListener('mousemove', ref.mouseMoveHandler);
     ref.addEventListener('click', ref.clickHandler);
+    ref.addEventListener('wheel', ref.wheelHandler, { passive: false });
 
-    return this.createResizable(ref, instance);
-  },
-  createGauge: function (ref, instance) {
-    return this.createResizable(ref, instance);
-  },
-  destroyScheduler: function (ref) {
-    if (ref && ref.resizeHandler) {
-      window.removeEventListener('resize', ref.resizeHandler);
-      delete ref.resizeHandler;
+    // Legend hover → series highlight (only when AllowSeriesHover is enabled)
+    ref.legendEnterHandler = function (e) {
+      if (!ref.classList.contains('rz-chart-series-hover')) return;
+      var legendItem = e.target.closest('.rz-legend-item');
+      if (!legendItem) return;
+      var g = legendItem.querySelector('g[class]');
+      if (!g) return;
+      var classes = g.className.baseVal || g.getAttribute('class') || '';
+      var match = classes.match(/rz-series-item-\d+|rz-series-\d+/);
+      if (!match) return;
+      var selector = '.' + match[0];
+      var svg = ref.querySelector('svg');
+      if (!svg) return;
+      var targets = svg.querySelectorAll(selector);
+      targets.forEach(function (t) { t.classList.add('rz-state-hover'); });
+    };
+    ref.legendLeaveHandler = function (e) {
+      if (!ref.classList.contains('rz-chart-series-hover')) return;
+      var legendItem = e.target.closest('.rz-legend-item');
+      if (!legendItem) return;
+      var svg = ref.querySelector('svg');
+      if (!svg) return;
+      var hovered = svg.querySelectorAll('.rz-state-hover');
+      hovered.forEach(function (t) { t.classList.remove('rz-state-hover'); });
+    };
+    ref.addEventListener('mouseenter', ref.legendEnterHandler, true);
+    ref.addEventListener('mouseleave', ref.legendLeaveHandler, true);
+
+    // Scrollbar drag handling via event delegation (survives Blazor re-renders)
+    var dragging = false;
+    var dragStartX = 0;
+    var dragStartPos = 0;
+
+    function isChartRTL() {
+      return document.documentElement.dir === 'rtl';
     }
-  },
-  createScheduler: function (ref, instance) {
-    ref.resizeHandler = function () {
-      var rect = ref.getBoundingClientRect();
 
-      instance.invokeMethodAsync('Resize', rect.width, rect.height);
+    function getThumbPos(thumb) {
+      return parseFloat(isChartRTL() ? thumb.style.right : thumb.style.left) || 0;
+    }
+
+    function setThumbPos(thumb, pos) {
+      if (isChartRTL()) {
+        thumb.style.right = pos + '%';
+        thumb.style.left = '';
+      } else {
+        thumb.style.left = pos + '%';
+        thumb.style.right = '';
+      }
+    }
+
+    ref.addEventListener('mousedown', function (e) {
+      var thumb = e.target.closest('.rz-chart-scrollbar-thumb');
+      if (!thumb) return;
+      dragging = true;
+      dragStartX = e.clientX;
+      dragStartPos = getThumbPos(thumb);
+      e.preventDefault();
+    });
+
+    ref.scrollbarMoveHandler = function (e) {
+      if (!dragging) return;
+      var track = ref.querySelector('.rz-chart-scrollbar-track');
+      var thumb = ref.querySelector('.rz-chart-scrollbar-thumb');
+      if (!track || !thumb) return;
+      var trackWidth = track.offsetWidth;
+      if (trackWidth <= 0) return;
+      var dx = e.clientX - dragStartX;
+      var deltaPercent = (isChartRTL() ? -dx : dx) / trackWidth * 100;
+      var newPos = Math.max(0, Math.min(100 - parseFloat(thumb.style.width), dragStartPos + deltaPercent));
+      setThumbPos(thumb, newPos);
+      var position = newPos / 100;
+      queuePan(position);
+    };
+    document.addEventListener('mousemove', ref.scrollbarMoveHandler);
+
+    ref.scrollbarUpHandler = function () {
+      dragging = false;
+    };
+    document.addEventListener('mouseup', ref.scrollbarUpHandler);
+
+    ref.addEventListener('click', function (e) {
+      var track = e.target.closest('.rz-chart-scrollbar-track');
+      if (!track || e.target.closest('.rz-chart-scrollbar-thumb')) return;
+      var thumb = track.querySelector('.rz-chart-scrollbar-thumb');
+      if (!thumb) return;
+      var trackRect = track.getBoundingClientRect();
+      var clickX = isChartRTL() ? trackRect.right - e.clientX : e.clientX - trackRect.left;
+      var thumbWidth = thumb.offsetWidth;
+      var position = Math.max(0, Math.min(1 - thumbWidth / track.offsetWidth, (clickX - thumbWidth / 2) / track.offsetWidth));
+      queuePan(position);
+    });
+
+    // Touch support for scrollbar drag
+    ref.addEventListener('touchstart', function (e) {
+      var thumb = e.target.closest('.rz-chart-scrollbar-thumb');
+      if (!thumb) return;
+      dragging = true;
+      dragStartX = e.touches[0].clientX;
+      dragStartPos = getThumbPos(thumb);
+      e.preventDefault();
+    }, { passive: false });
+
+    ref.scrollbarTouchMoveHandler = function (e) {
+      if (!dragging) return;
+      var track = ref.querySelector('.rz-chart-scrollbar-track');
+      var thumb = ref.querySelector('.rz-chart-scrollbar-thumb');
+      if (!track || !thumb) return;
+      var trackWidth = track.offsetWidth;
+      if (trackWidth <= 0) return;
+      var dx = e.touches[0].clientX - dragStartX;
+      var deltaPercent = (isChartRTL() ? -dx : dx) / trackWidth * 100;
+      var newPos = Math.max(0, Math.min(100 - parseFloat(thumb.style.width), dragStartPos + deltaPercent));
+      setThumbPos(thumb, newPos);
+      var position = newPos / 100;
+      queuePan(position);
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', ref.scrollbarTouchMoveHandler, { passive: false });
+
+    ref.scrollbarTouchEndHandler = function () {
+      dragging = false;
+    };
+    document.addEventListener('touchend', ref.scrollbarTouchEndHandler);
+
+    // Touch pan and pinch-to-zoom support
+    var pinchStartDistance = 0;
+    var pinchActive = false;
+    var touchPanning = false;
+    var touchPanStartX = 0;
+    var touchPanPos = null;
+
+    ref.touchStartHandler = function (e) {
+      if (e.touches.length === 2) {
+        // Two-finger: pinch-to-zoom
+        pinchActive = true;
+        touchPanning = false;
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
+        e.preventDefault();
+      } else if (e.touches.length === 1 && !e.target.closest('.rz-chart-scrollbar')) {
+        // Single-finger on chart area: pan
+        touchPanning = true;
+        touchPanStartX = e.touches[0].clientX;
+        touchPanPos = null;
+      }
+    };
+    ref.addEventListener('touchstart', ref.touchStartHandler, { passive: false });
+
+    ref.touchMoveHandler = function (e) {
+      if (pinchActive && e.touches.length === 2) {
+        // Pinch-to-zoom
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        var currentDistance = Math.sqrt(dx * dx + dy * dy);
+        if (pinchStartDistance <= 0) return;
+        var midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var rect = ref.getBoundingClientRect();
+        var x = midX - rect.left;
+        var ratio = currentDistance / pinchStartDistance;
+        if (ratio > 1.05) {
+          queueWheel(x, -1);
+          pinchStartDistance = currentDistance;
+        } else if (ratio < 0.95) {
+          queueWheel(x, 1);
+          pinchStartDistance = currentDistance;
+        }
+        e.preventDefault();
+      } else if (touchPanning && e.touches.length === 1) {
+        // Single-finger pan
+        var rect = ref.getBoundingClientRect();
+        var chartWidth = rect.width;
+        if (chartWidth <= 0) return;
+        var dx = e.touches[0].clientX - touchPanStartX;
+        var thumb = ref.querySelector('.rz-chart-scrollbar-thumb');
+        if (!thumb) return;
+        var thumbWidth = parseFloat(thumb.style.width) || 50;
+        var currentPos = touchPanPos !== null ? touchPanPos : getThumbPos(thumb);
+        // Swipe in reading direction = move view backward, swipe against = move view forward
+        var deltaPercent = (isChartRTL() ? dx : -dx) / chartWidth * 100;
+        var newPos = Math.max(0, Math.min(100 - thumbWidth, currentPos + deltaPercent));
+        touchPanPos = newPos;
+        setThumbPos(thumb, newPos);
+        var position = newPos / 100;
+        queuePan(position);
+        touchPanStartX = e.touches[0].clientX;
+        e.preventDefault();
+      }
+    };
+    ref.addEventListener('touchmove', ref.touchMoveHandler, { passive: false });
+
+    ref.touchEndHandler = function (e) {
+      if (e.touches.length < 2) {
+        pinchActive = false;
+      }
+      if (e.touches.length === 0) {
+        touchPanning = false;
+      }
+    };
+    ref.addEventListener('touchend', ref.touchEndHandler);
+
+    // RTL detection
+    ref._chartRTLObserver = new MutationObserver(function () {
+      try { suppressDisposed(instance.invokeMethodAsync('SetRTL', document.documentElement.dir === 'rtl')); } catch (e) { }
+    });
+    ref._chartRTLObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['dir'] });
+    try { suppressDisposed(instance.invokeMethodAsync('SetRTL', document.documentElement.dir === 'rtl')); } catch (e) { }
+
+    var legendObserver = null;
+    ref.observeLegend = function (observe) {
+      if (legendObserver) {
+        legendObserver.disconnect();
+        legendObserver = null;
+      }
+      var legend = observe && window.ResizeObserver ? ref.querySelector(':scope > .rz-legend') : null;
+      if (!legend) return;
+      var lastSize = null;
+      var lastVertical = null;
+      legendObserver = new ResizeObserver(function () {
+        var rect = legend.getBoundingClientRect();
+        var vertical = legend.classList.contains('rz-legend-left') || legend.classList.contains('rz-legend-right');
+        var size = Math.ceil(vertical ? rect.width : rect.height);
+        if (size === lastSize && vertical === lastVertical) return;
+        lastSize = size;
+        lastVertical = vertical;
+        try { suppressDisposed(instance.invokeMethodAsync('LegendResize', size, vertical)); } catch { }
+      });
+      legendObserver.observe(legend);
     };
 
-    window.addEventListener('resize', ref.resizeHandler);
-
+    this.createResizable(ref, instance);
+    var self = this;
+    ref._radzenDispose = function () { self.destroyChart(ref); };
     var rect = ref.getBoundingClientRect();
-    return {width: rect.width, height: rect.height};
+    return { width: rect.width, height: rect.height };
+  },
+  createGauge: function (ref, instance) {
+    this.createResizable(ref, instance);
+    ref._gaugeRTLObserver = new MutationObserver(function () {
+      try { suppressDisposed(instance.invokeMethodAsync('SetRTL', document.documentElement.dir === 'rtl')); } catch (e) { }
+    });
+    ref._gaugeRTLObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['dir'] });
+    try { suppressDisposed(instance.invokeMethodAsync('SetRTL', document.documentElement.dir === 'rtl')); } catch (e) { }
+    var rect = ref.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
   },
   innerHTML: function (ref, value) {
     if (value != undefined) {
@@ -2001,9 +5193,900 @@ window.Radzen = {
     document.execCommand(name, false, value);
     return this.queryCommands(ref);
   },
+  formatTableColumnHeader: function (ref, index) {
+    var format = (ref && ref.tableColumnHeaderFormat) || 'Column {0}';
+    return format.replace('{0}', (index + 1).toString());
+  },
+  createTableHTML: function (ref, options) {
+    options = options || {};
+    var rows = Math.max(parseInt(options.rows || 0, 10) || 0, 1);
+    var columns = Math.max(parseInt(options.columns || 0, 10) || 0, 1);
+    var width = options.width || '100%';
+    var border = Math.max(parseInt(options.border || 0, 10) || 0, 0);
+    var headerRow = !!options.headerRow;
+    var html = '<table style="border-collapse: collapse; width: ' + width + ';" border="' + border + '">';
+
+    if (headerRow) {
+      html += '<thead><tr>';
+      for (var headerIndex = 0; headerIndex < columns; headerIndex++) {
+        html += '<th>' + this.formatTableColumnHeader(ref, headerIndex) + '</th>';
+      }
+      html += '</tr></thead>';
+    }
+
+    html += '<tbody>';
+    for (var rowIndex = 0; rowIndex < rows; rowIndex++) {
+      html += '<tr>';
+      for (var columnIndex = 0; columnIndex < columns; columnIndex++) {
+        html += '<td>&nbsp;</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table><p></p>';
+
+    return html;
+  },
+  buildTableContext: function (ref, element) {
+    if (!ref) {
+      return { ref: ref };
+    }
+
+    if (!element || !ref.contains(element)) {
+      return { ref: ref };
+    }
+
+    var cell = element.closest('td,th');
+    var table = element.closest('table');
+
+    if (!cell || !table || !ref.contains(table)) {
+      return { ref: ref, table: table };
+    }
+
+    var row = cell.parentElement;
+    var tbody = table.tBodies && table.tBodies.length ? table.tBodies[0] : null;
+    var thead = table.tHead;
+    var rowIndex = -1;
+
+    if (tbody && tbody.contains(row)) {
+      rowIndex = Array.prototype.indexOf.call(tbody.rows, row);
+    }
+
+    return {
+      ref: ref,
+      table: table,
+      cell: cell,
+      row: row,
+      tbody: tbody,
+      thead: thead,
+      inHeader: !!(thead && thead.contains(cell)),
+      rowIndex: rowIndex,
+      columnIndex: Array.prototype.indexOf.call(row.children, cell)
+    };
+  },
+  getTableContext: function (ref) {
+    var selection = getSelection();
+    var range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    var node = selection && selection.focusNode ? selection.focusNode : range && range.commonAncestorContainer;
+
+    if (!node) {
+      return { ref: ref };
+    }
+
+    return this.buildTableContext(ref, node.nodeType === 3 ? node.parentElement : node);
+  },
+  getCellMatrix: function (section) {
+    var matrix = [];
+    if (!section || !section.rows) {
+      return matrix;
+    }
+
+    for (var rowIndex = 0; rowIndex < section.rows.length; rowIndex++) {
+      var row = section.rows[rowIndex];
+      if (!matrix[rowIndex]) {
+        matrix[rowIndex] = [];
+      }
+
+      var columnIndex = 0;
+      for (var cellIndex = 0; cellIndex < row.cells.length; cellIndex++) {
+        var cell = row.cells[cellIndex];
+        while (matrix[rowIndex][columnIndex]) {
+          columnIndex++;
+        }
+
+        var colSpan = Math.max(parseInt(cell.getAttribute('colspan') || 1, 10) || 1, 1);
+        var rowSpan = Math.max(parseInt(cell.getAttribute('rowspan') || 1, 10) || 1, 1);
+
+        for (var r = 0; r < rowSpan; r++) {
+          var targetRow = rowIndex + r;
+          if (!matrix[targetRow]) {
+            matrix[targetRow] = [];
+          }
+
+          for (var c = 0; c < colSpan; c++) {
+            matrix[targetRow][columnIndex + c] = cell;
+          }
+        }
+
+        columnIndex += colSpan;
+      }
+    }
+
+    return matrix;
+  },
+  getCellPosition: function (section, cell, matrix) {
+    matrix = matrix || this.getCellMatrix(section);
+
+    for (var rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
+      for (var columnIndex = 0; columnIndex < (matrix[rowIndex] || []).length; columnIndex++) {
+        if (matrix[rowIndex][columnIndex] === cell) {
+          return { rowIndex: rowIndex, columnIndex: columnIndex };
+        }
+      }
+    }
+
+    return { rowIndex: -1, columnIndex: -1 };
+  },
+  ensureTableCellSelection: function (context, section, position) {
+    var ref = context.ref;
+    var table = context.table;
+    var cell = context.cell;
+
+    if (!ref || !table || !cell || table.contains(cell) || !ref.contains(table) || !position) {
+      return;
+    }
+
+    if (!section || !table.contains(section) || !section.rows.length) {
+      section = table.tBodies.length ? table.tBodies[0] : table.tHead;
+    }
+
+    if ((!section || !section.rows.length) && table.tHead && table.tHead.rows.length) {
+      section = table.tHead;
+    }
+
+    var matrix = this.getCellMatrix(section);
+    if (!matrix.length) {
+      return;
+    }
+
+    var rowIndex = Math.max(0, Math.min(position.rowIndex, matrix.length - 1));
+    var row = matrix[rowIndex] || [];
+    if (!row.length) {
+      return;
+    }
+
+    var columnIndex = Math.max(0, Math.min(position.columnIndex, row.length - 1));
+    var target = row[columnIndex];
+
+    for (var offset = 1; !target && (columnIndex - offset >= 0 || columnIndex + offset < row.length); offset++) {
+      target = row[columnIndex - offset] || row[columnIndex + offset];
+    }
+
+    if (!target) {
+      return;
+    }
+
+    var range = document.createRange();
+    range.selectNodeContents(target);
+    range.collapse(true);
+    var selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    ref.focus();
+
+    if (ref.lastSelectedTableCell && !ref.contains(ref.lastSelectedTableCell)) {
+      ref.lastSelectedTableCell = target;
+    }
+
+    if (!this.getSelectedTableCells(ref).length) {
+      target.classList.add('rz-html-editor-cell-selected');
+    }
+  },
+  clearSelectedTableCells: function (ref) {
+    if (!ref) {
+      return;
+    }
+
+    Array.prototype.forEach.call(ref.querySelectorAll('td.rz-html-editor-cell-selected,th.rz-html-editor-cell-selected'), function (cell) {
+      cell.classList.remove('rz-html-editor-cell-selected');
+    });
+  },
+  getSelectedTableCells: function (ref) {
+    if (!ref) {
+      return [];
+    }
+
+    return Array.prototype.filter.call(ref.querySelectorAll('td.rz-html-editor-cell-selected,th.rz-html-editor-cell-selected'), function (cell) {
+      return ref.contains(cell);
+    });
+  },
+  selectTableCellRange: function (ref, startCell, endCell) {
+    if (!ref || !startCell || !endCell) {
+      return false;
+    }
+
+    var startSection = startCell.parentElement ? startCell.parentElement.parentElement : null;
+    var endSection = endCell.parentElement ? endCell.parentElement.parentElement : null;
+
+    if (!startSection || startSection !== endSection) {
+      return false;
+    }
+
+    var matrix = this.getCellMatrix(startSection);
+    var start = this.getCellPosition(startSection, startCell, matrix);
+    var end = this.getCellPosition(startSection, endCell, matrix);
+
+    if (start.rowIndex < 0 || start.columnIndex < 0 || end.rowIndex < 0 || end.columnIndex < 0) {
+      return false;
+    }
+
+    var minRow = Math.min(start.rowIndex, end.rowIndex);
+    var maxRow = Math.max(start.rowIndex, end.rowIndex);
+    var minColumn = Math.min(start.columnIndex, end.columnIndex);
+    var maxColumn = Math.max(start.columnIndex, end.columnIndex);
+    this.clearSelectedTableCells(ref);
+
+    for (var rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
+      for (var columnIndex = minColumn; columnIndex <= maxColumn; columnIndex++) {
+        var cell = (matrix[rowIndex] || [])[columnIndex];
+        if (cell) {
+          cell.classList.add('rz-html-editor-cell-selected');
+        }
+      }
+    }
+
+    return true;
+  },
+  getSelectedCellBounds: function (ref, section) {
+    var selectedCells = this.getSelectedTableCells(ref);
+    if (!selectedCells.length) {
+      return null;
+    }
+
+    var matrix = this.getCellMatrix(section);
+    var minRow = Number.MAX_SAFE_INTEGER;
+    var maxRow = -1;
+    var minColumn = Number.MAX_SAFE_INTEGER;
+    var maxColumn = -1;
+
+    selectedCells.forEach(function (selectedCell) {
+      var position = Radzen.getCellPosition(section, selectedCell, matrix);
+      var rowIndex = position.rowIndex;
+      var columnIndex = position.columnIndex;
+      if (rowIndex < 0 || columnIndex < 0) {
+        return;
+      }
+
+      var rowSpan = Math.max(parseInt(selectedCell.getAttribute('rowspan') || 1, 10) || 1, 1);
+      var colSpan = Math.max(parseInt(selectedCell.getAttribute('colspan') || 1, 10) || 1, 1);
+
+      minRow = Math.min(minRow, rowIndex);
+      maxRow = Math.max(maxRow, rowIndex + rowSpan - 1);
+      minColumn = Math.min(minColumn, columnIndex);
+      maxColumn = Math.max(maxColumn, columnIndex + colSpan - 1);
+    });
+
+    if (minRow === Number.MAX_SAFE_INTEGER || minColumn === Number.MAX_SAFE_INTEGER) {
+      return null;
+    }
+
+    for (var rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
+      for (var columnIndex = minColumn; columnIndex <= maxColumn; columnIndex++) {
+        var candidate = (matrix[rowIndex] || [])[columnIndex];
+        if (!candidate || selectedCells.indexOf(candidate) === -1) {
+          return null;
+        }
+      }
+    }
+
+    return {
+      selectedCells: selectedCells,
+      matrix: matrix,
+      minRow: minRow,
+      maxRow: maxRow,
+      minColumn: minColumn,
+      maxColumn: maxColumn
+    };
+  },
+  copySelectedTableCells: function (ref) {
+    var cells = this.getSelectedTableCells(ref);
+    if (!cells.length) {
+      return false;
+    }
+
+    var section = cells[0].parentElement ? cells[0].parentElement.parentElement : null;
+    var bounds = this.getSelectedCellBounds(ref, section);
+    if (!bounds) {
+      return false;
+    }
+
+    var copiedMatrix = [];
+    for (var rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex++) {
+      copiedMatrix.push([]);
+      for (var columnIndex = bounds.minColumn; columnIndex <= bounds.maxColumn; columnIndex++) {
+        var cell = (bounds.matrix[rowIndex] || [])[columnIndex];
+        copiedMatrix[copiedMatrix.length - 1].push(bounds.selectedCells.indexOf(cell) > -1 && cell ? cell.outerHTML : null);
+      }
+    }
+
+    ref.copiedCells = {
+      matrix: copiedMatrix,
+      rows: copiedMatrix.length,
+      columns: copiedMatrix.length ? copiedMatrix[0].length : 0
+    };
+
+    return true;
+  },
+  pasteSelectedTableCells: function (ref, targetCell) {
+    if (!ref || !ref.copiedCells || !ref.copiedCells.matrix || !targetCell || !targetCell.parentElement) {
+      return false;
+    }
+
+    var section = targetCell.parentElement.parentElement;
+    var matrix = this.getCellMatrix(section);
+    var position = this.getCellPosition(section, targetCell, matrix);
+    var startRow = position.rowIndex;
+    var startColumn = position.columnIndex;
+
+    if (startRow < 0 || startColumn < 0) {
+      return false;
+    }
+
+    for (var guardRowOffset = 0; guardRowOffset < ref.copiedCells.rows; guardRowOffset++) {
+      for (var guardColumnOffset = 0; guardColumnOffset < ref.copiedCells.columns; guardColumnOffset++) {
+        var guardCell = (matrix[startRow + guardRowOffset] || [])[startColumn + guardColumnOffset];
+        if (guardCell) {
+          var guardCellPosition = this.getCellPosition(section, guardCell, matrix);
+          var guardRowSpan = Math.max(parseInt(guardCell.getAttribute('rowspan') || 1, 10) || 1, 1);
+          var guardColSpan = Math.max(parseInt(guardCell.getAttribute('colspan') || 1, 10) || 1, 1);
+          if ((guardRowSpan > 1 || guardColSpan > 1) && (guardCellPosition.rowIndex !== startRow + guardRowOffset || guardCellPosition.columnIndex !== startColumn + guardColumnOffset)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    for (var rowOffset = 0; rowOffset < ref.copiedCells.rows; rowOffset++) {
+      var targetRow = section.rows[startRow + rowOffset];
+      if (!targetRow) {
+        if (section.tagName === 'TBODY') {
+          targetRow = section.insertRow();
+        } else {
+          return false;
+        }
+      }
+
+      for (var columnOffset = 0; columnOffset < ref.copiedCells.columns; columnOffset++) {
+        var target = (this.getCellMatrix(section)[startRow + rowOffset] || [])[startColumn + columnOffset];
+        if (!target) {
+          target = document.createElement(targetCell.tagName.toLowerCase());
+          target.innerHTML = '&nbsp;';
+          targetRow.appendChild(target);
+        }
+
+        var html = ref.copiedCells.matrix[rowOffset][columnOffset];
+        if (html) {
+          var template = document.createElement('template');
+          template.innerHTML = html.trim();
+          var sourceCell = template.content.firstElementChild;
+          if (sourceCell) {
+            target.innerHTML = sourceCell.innerHTML;
+          }
+        }
+      }
+    }
+
+    return true;
+  },
+  createCommandResult: function (ref, success, message) {
+    var result = this.queryCommands(ref);
+    result.success = success;
+    result.message = message || null;
+    return result;
+  },
+  getContextTableSelection: function (ref) {
+    var context = ref && ref.contextMenuTarget ? this.getTableContextFromTarget(ref, ref.contextMenuTarget) : this.getTableContext(ref);
+    if (!context || !context.table) {
+      return this.getTableSelection(ref);
+    }
+
+    return this.getTableSelectionFromContext(ref, context);
+  },
+  getTableContextFromTarget: function (ref, target) {
+    if (!target) {
+      return this.getTableContext(ref);
+    }
+
+    return this.buildTableContext(ref, target.nodeType === 3 ? target.parentElement : target);
+  },
+  getTableSelectionFromContext: function (ref, context) {
+    var table = context.table;
+
+    if (!table) {
+      return this.getTableSelection(ref);
+    }
+
+    var cell = context.cell;
+    var section = context.inHeader && table.tHead ? table.tHead : (context.row ? context.row.parentElement : (table.tBodies[0] || table));
+    var matrix = this.getCellMatrix(section);
+    var position = cell ? this.getCellPosition(section, cell, matrix) : { rowIndex: -1, columnIndex: context.columnIndex };
+    var rowIndex = position.rowIndex;
+    var columnIndex = position.columnIndex;
+    var colSpan = cell ? Math.max(parseInt(cell.getAttribute('colspan') || 1, 10) || 1, 1) : 1;
+    var rowSpan = cell ? Math.max(parseInt(cell.getAttribute('rowspan') || 1, 10) || 1, 1) : 1;
+    var rowCells = matrix[rowIndex] || [];
+    var rightCell = rowCells[columnIndex + colSpan];
+    var belowRow = matrix[rowIndex + rowSpan] || [];
+    var canMergeDown = true;
+
+    for (var i = 0; i < colSpan; i++) {
+      if (!belowRow[columnIndex + i]) {
+        canMergeDown = false;
+        break;
+      }
+    }
+
+    var bodyRows = table.tBodies && table.tBodies.length ? table.tBodies[0].rows.length : 0;
+    var firstRow = table.rows && table.rows.length ? table.rows[0] : null;
+    var border = parseInt(table.getAttribute('border') || 0, 10) || 0;
+    var columnWidth = cell && cell.style ? cell.style.width || null : null;
+    var cellBackground = cell && cell.style ? cell.style.backgroundColor || null : null;
+    var cellPadding = cell && cell.style ? cell.style.padding || null : null;
+    var cellTextAlign = cell && cell.style ? cell.style.textAlign || null : null;
+    var cellVerticalAlign = cell && cell.style ? cell.style.verticalAlign || null : null;
+    var cellBorder = cell && cell.style ? cell.style.border || null : null;
+    var columnWidthPx = columnWidth ? parseInt(columnWidth, 10) || null : null;
+    var cellPaddingPx = cellPadding ? parseInt(cellPadding, 10) || null : null;
+    var borderTop = !!(cell && cell.style && cell.style.borderTop !== 'none' && cell.style.borderTop !== '');
+    var borderRight = !!(cell && cell.style && cell.style.borderRight !== 'none' && cell.style.borderRight !== '');
+    var borderBottom = !!(cell && cell.style && cell.style.borderBottom !== 'none' && cell.style.borderBottom !== '');
+    var borderLeft = !!(cell && cell.style && cell.style.borderLeft !== 'none' && cell.style.borderLeft !== '');
+    var borderStyle = cell && cell.style ? (cell.style.borderStyle || (cellBorder ? cellBorder.split(' ')[1] : null)) : null;
+    var borderWidthPx = cell && cell.style && cell.style.borderWidth ? parseInt(cell.style.borderWidth, 10) || null : (cellBorder ? parseInt(cellBorder, 10) || null : null);
+    var borderColor = cell && cell.style ? (cell.style.borderColor || null) : null;
+
+    return {
+      inTable: true,
+      inHeader: !!context.inHeader,
+      rowIndex: context.rowIndex,
+      columnIndex: columnIndex,
+      rows: bodyRows,
+      columns: firstRow ? firstRow.children.length : 0,
+      width: table.style.width || table.getAttribute('width') || '100%',
+      border: border,
+      headerRow: !!(table.tHead && table.tHead.rows.length),
+      colSpan: colSpan,
+      rowSpan: rowSpan,
+      canMergeRight: !!rightCell && rightCell !== cell,
+      canMergeDown: canMergeDown,
+      canSplit: colSpan > 1 || rowSpan > 1,
+      columnWidth: columnWidth,
+      cellBackground: cellBackground,
+      cellPadding: cellPadding,
+      cellTextAlign: cellTextAlign,
+      cellVerticalAlign: cellVerticalAlign,
+      cellBorder: cellBorder,
+      columnWidthPx: columnWidthPx,
+      cellPaddingPx: cellPaddingPx,
+      borderStyle: borderStyle,
+      borderWidthPx: borderWidthPx,
+      borderColor: borderColor,
+      borderTop: borderTop,
+      borderRight: borderRight,
+      borderBottom: borderBottom,
+      borderLeft: borderLeft
+    };
+  },
+  getTableSelection: function (ref) {
+    var context = this.getTableContext(ref);
+    if (!context.table) {
+      return {
+        inTable: false,
+        inHeader: false,
+        rowIndex: -1,
+        columnIndex: -1,
+        rows: 0,
+        columns: 0,
+        width: null,
+        border: 0,
+        headerRow: false,
+        colSpan: 1,
+        rowSpan: 1,
+        canMergeRight: false,
+        canMergeDown: false,
+        canSplit: false,
+        columnWidth: null,
+        columnWidthPx: null,
+        cellBackground: null,
+        cellPadding: null,
+        cellPaddingPx: null,
+        cellTextAlign: null,
+        cellVerticalAlign: null,
+        cellBorder: null,
+        borderStyle: null,
+        borderWidthPx: null,
+        borderColor: null,
+        borderTop: false,
+        borderRight: false,
+        borderBottom: false,
+        borderLeft: false
+      };
+    }
+
+    return this.getTableSelectionFromContext(ref, context);
+  },
+  ensureTableBody: function (table) {
+    if (!table.tBodies.length) {
+      table.appendChild(document.createElement('tbody'));
+    }
+    return table.tBodies[0];
+  },
+  getTableColumnCount: function (table) {
+    var columns = 0;
+    Array.prototype.forEach.call(table.children, function (section) {
+      this.getCellMatrix(section).forEach(function (row) {
+        columns = Math.max(columns, row.length);
+      });
+    }, this);
+    return columns;
+  },
+  createTableRow: function (ref, columns, header) {
+    var tr = document.createElement('tr');
+    for (var i = 0; i < columns; i++) {
+      var element = document.createElement(header ? 'th' : 'td');
+      element.innerHTML = header ? this.formatTableColumnHeader(ref, i) : '&nbsp;';
+      tr.appendChild(element);
+    }
+    return tr;
+  },
+  updateTable: function (context, value) {
+    value = value || {};
+    var table = context.table;
+    var cell = context.cell;
+    var row = context.row;
+    var columns = Math.max(parseInt(value.columns || 0, 10) || 0, 1);
+    var rows = Math.max(parseInt(value.rows || 0, 10) || 0, 1);
+    var border = Math.max(parseInt(value.border || 0, 10) || 0, 0);
+    var columnWidth = value.columnWidthPx ? value.columnWidthPx + 'px' : (value.columnWidth || '');
+    var cellPadding = value.cellPaddingPx != null ? value.cellPaddingPx + 'px' : (value.cellPadding || '');
+    var borderStyle = value.borderStyle || 'solid';
+    var borderWidth = value.borderWidthPx != null ? value.borderWidthPx + 'px' : '1px';
+    var borderColor = value.borderColor || 'currentColor';
+
+    table.style.width = value.width || '100%';
+    if (!table.style.borderCollapse) {
+      table.style.borderCollapse = 'collapse';
+    }
+    table.setAttribute('border', border.toString());
+
+    this.updateTableHeader(context.ref, table, columns, !!value.headerRow);
+    this.updateTableBody(context.ref, table, rows, columns);
+
+    if (cell) {
+      this.updateTableCellStyles(row, cell, context, {
+        columnWidth: columnWidth,
+        cellBackground: value.cellBackground || '',
+        cellPadding: cellPadding,
+        cellTextAlign: value.cellTextAlign || '',
+        cellVerticalAlign: value.cellVerticalAlign || '',
+        cellBorder: value.cellBorder || '',
+        borderValue: borderWidth + ' ' + borderStyle + ' ' + borderColor,
+        borderTop: value.borderTop,
+        borderRight: value.borderRight,
+        borderBottom: value.borderBottom,
+        borderLeft: value.borderLeft
+      });
+    }
+  },
+  updateTableHeader: function (ref, table, columns, headerRow) {
+    if (headerRow) {
+      var thead = table.tHead || table.createTHead();
+      var header = thead.rows.length ? thead.rows[0] : thead.insertRow();
+      while (header.children.length < columns) {
+        var th = document.createElement('th');
+        th.innerHTML = this.formatTableColumnHeader(ref, header.children.length);
+        header.appendChild(th);
+      }
+      while (header.children.length > columns) {
+        header.removeChild(header.lastElementChild);
+      }
+      for (var h = 0; h < header.children.length; h++) {
+        if (!header.children[h].innerHTML || header.children[h].innerHTML === '&nbsp;') {
+          header.children[h].innerHTML = this.formatTableColumnHeader(ref, h);
+        }
+      }
+    } else if (table.tHead) {
+      table.deleteTHead();
+    }
+  },
+  updateTableBody: function (ref, table, rows, columns) {
+    var tbody = this.ensureTableBody(table);
+    while (tbody.rows.length < rows) {
+      tbody.appendChild(this.createTableRow(ref, columns, false));
+    }
+    while (tbody.rows.length > rows) {
+      tbody.removeChild(tbody.lastElementChild);
+    }
+    for (var r = 0; r < tbody.rows.length; r++) {
+      var bodyRow = tbody.rows[r];
+      while (bodyRow.children.length < columns) {
+        var td = document.createElement('td');
+        td.innerHTML = '&nbsp;';
+        bodyRow.appendChild(td);
+      }
+      while (bodyRow.children.length > columns) {
+        bodyRow.removeChild(bodyRow.lastElementChild);
+      }
+    }
+  },
+  updateTableCellStyles: function (row, cell, context, options) {
+    var sectionMatrix = row && row.parentElement ? this.getCellMatrix(row.parentElement) : [];
+    var resizePosition = row && row.parentElement ? this.getCellPosition(row.parentElement, cell, sectionMatrix) : { columnIndex: context.columnIndex };
+    var resizeColumnIndex = resizePosition.columnIndex;
+
+    for (var rowIndex = 0; rowIndex < sectionMatrix.length; rowIndex++) {
+      var syncCell = sectionMatrix[rowIndex][resizeColumnIndex];
+      if (syncCell && options.columnWidth) {
+        syncCell.style.width = options.columnWidth;
+      } else if (syncCell) {
+        syncCell.style.removeProperty('width');
+      }
+    }
+
+    options.cellBackground ? cell.style.backgroundColor = options.cellBackground : cell.style.removeProperty('background-color');
+    options.cellPadding ? cell.style.padding = options.cellPadding : cell.style.removeProperty('padding');
+    options.cellTextAlign ? cell.style.textAlign = options.cellTextAlign : cell.style.removeProperty('text-align');
+    options.cellVerticalAlign ? cell.style.verticalAlign = options.cellVerticalAlign : cell.style.removeProperty('vertical-align');
+
+    if (options.cellBorder) {
+      cell.style.border = options.cellBorder;
+    } else {
+      cell.style.borderTop = options.borderTop ? options.borderValue : 'none';
+      cell.style.borderRight = options.borderRight ? options.borderValue : 'none';
+      cell.style.borderBottom = options.borderBottom ? options.borderValue : 'none';
+      cell.style.borderLeft = options.borderLeft ? options.borderValue : 'none';
+    }
+  },
+  addTableRow: function (context, command) {
+    var row = context.row;
+    var newRow = this.createTableRow(context.ref, this.getTableColumnCount(context.table), context.inHeader);
+    row.parentNode.insertBefore(newRow, command === 'addRowBefore' ? row : row.nextSibling);
+  },
+  deleteTableRow: function (context) {
+    var table = context.table;
+    var columns = this.getTableColumnCount(table);
+    if (context.row) {
+      context.row.remove();
+    }
+    if (table.tHead && !table.tHead.rows.length) {
+      table.deleteTHead();
+    }
+    if (table.tBodies.length && !table.tBodies[0].rows.length) {
+      table.tBodies[0].appendChild(this.createTableRow(context.ref, columns || 1, false));
+    }
+  },
+  addTableColumn: function (context, command) {
+    var self = this;
+    var ref = context.ref;
+    var table = context.table;
+    var columnIndex = Math.max(context.columnIndex, 0);
+    var insertIndex = command === 'addColumnBefore' ? columnIndex : columnIndex + 1;
+    Array.prototype.forEach.call(table.rows, function (tableRow) {
+      var header = table.tHead && table.tHead.contains(tableRow);
+      var column = document.createElement(header ? 'th' : 'td');
+      column.innerHTML = header ? self.formatTableColumnHeader(ref, insertIndex) : '&nbsp;';
+      tableRow.insertBefore(column, tableRow.children[insertIndex] || null);
+    });
+  },
+  deleteTableColumn: function (context) {
+    var index = context.columnIndex;
+    if (index >= 0) {
+      Array.prototype.forEach.call(context.table.rows, function (tableRow) {
+        if (tableRow.children.length > 1 && tableRow.children[index]) {
+          tableRow.removeChild(tableRow.children[index]);
+        }
+      });
+    }
+  },
+  mergeTableCellRight: function (ref, context) {
+    var row = context.row;
+    var cell = context.cell;
+    var sectionRight = row && row.parentElement ? row.parentElement : null;
+    var boundsRight = this.getSelectedCellBounds(ref, sectionRight);
+    if (boundsRight && boundsRight.selectedCells.length > 1) {
+      var anchorCellRight = (boundsRight.matrix[boundsRight.minRow] || [])[boundsRight.minColumn];
+      if (!anchorCellRight) {
+        return false;
+      }
+      anchorCellRight.setAttribute('colspan', Math.max(boundsRight.maxColumn - boundsRight.minColumn + 1, 1));
+      anchorCellRight.setAttribute('rowspan', Math.max(boundsRight.maxRow - boundsRight.minRow + 1, 1));
+      for (var mergeRow = boundsRight.minRow; mergeRow <= boundsRight.maxRow; mergeRow++) {
+        for (var mergeCol = boundsRight.minColumn; mergeCol <= boundsRight.maxColumn; mergeCol++) {
+          var mergedCell = (boundsRight.matrix[mergeRow] || [])[mergeCol];
+          if (mergedCell && mergedCell !== anchorCellRight && mergedCell.parentElement) {
+            mergedCell.remove();
+          }
+        }
+      }
+      return true;
+    }
+    if (cell && row && row.parentElement) {
+      var rightMatrix = this.getCellMatrix(row.parentElement);
+      var rightPosition = this.getCellPosition(row.parentElement, cell, rightMatrix);
+      var currentRightSpan = Math.max(parseInt(cell.getAttribute('colspan') || 1, 10) || 1, 1);
+      var nextCell = (rightMatrix[rightPosition.rowIndex] || [])[rightPosition.columnIndex + currentRightSpan];
+      if (!nextCell || nextCell === cell) {
+        return true;
+      }
+      cell.setAttribute('colspan', currentRightSpan + Math.max(parseInt(nextCell.getAttribute('colspan') || 1, 10) || 1, 1));
+      if (!cell.innerHTML || cell.innerHTML === '&nbsp;') {
+        cell.innerHTML = nextCell.innerHTML;
+      } else if (nextCell.innerHTML && nextCell.innerHTML !== '&nbsp;') {
+        cell.innerHTML += ' ' + nextCell.innerHTML;
+      }
+      nextCell.remove();
+    }
+    return true;
+  },
+  mergeTableCellDown: function (context) {
+    var cell = context.cell;
+    var row = context.row;
+    if (cell && row && row.parentElement) {
+      var downMatrix = this.getCellMatrix(row.parentElement);
+      var downPosition = this.getCellPosition(row.parentElement, cell, downMatrix);
+      var currentRowSpan = Math.max(parseInt(cell.getAttribute('rowspan') || 1, 10) || 1, 1);
+      var targetCell = (downMatrix[downPosition.rowIndex + currentRowSpan] || [])[downPosition.columnIndex];
+      if (targetCell) {
+        cell.setAttribute('rowspan', currentRowSpan + Math.max(parseInt(targetCell.getAttribute('rowspan') || 1, 10) || 1, 1));
+        if (!cell.innerHTML || cell.innerHTML === '&nbsp;') {
+          cell.innerHTML = targetCell.innerHTML;
+        } else if (targetCell.innerHTML && targetCell.innerHTML !== '&nbsp;') {
+          cell.innerHTML += '<br>' + targetCell.innerHTML;
+        }
+        targetCell.remove();
+      }
+    }
+  },
+  splitTableCell: function (context) {
+    var cell = context.cell;
+    var row = context.row;
+    if (!cell) {
+      return;
+    }
+    var splitColSpan = Math.max(parseInt(cell.getAttribute('colspan') || 1, 10) || 1, 1);
+    var splitRowSpan = Math.max(parseInt(cell.getAttribute('rowspan') || 1, 10) || 1, 1);
+    var splitPosition = row && row.parentElement ? this.getCellPosition(row.parentElement, cell) : { rowIndex: row ? row.sectionRowIndex : 0, columnIndex: context.columnIndex };
+    if (splitColSpan > 1) {
+      cell.removeAttribute('colspan');
+      for (var c = 1; c < splitColSpan; c++) {
+        var splitCell = document.createElement(cell.tagName.toLowerCase());
+        splitCell.innerHTML = '&nbsp;';
+        cell.parentElement.insertBefore(splitCell, cell.parentElement.cells[(Array.prototype.indexOf.call(cell.parentElement.cells, cell) + c)] || null);
+      }
+    }
+    if (splitRowSpan > 1 && row && row.parentElement) {
+      cell.removeAttribute('rowspan');
+      for (var sr = 1; sr < splitRowSpan; sr++) {
+        var splitRow = row.parentElement.rows[row.sectionRowIndex + sr];
+        if (splitRow) {
+          var splitMatrix = this.getCellMatrix(row.parentElement);
+          var splitDownCell = document.createElement(cell.tagName.toLowerCase());
+          splitDownCell.innerHTML = '&nbsp;';
+          var splitReference = null;
+          for (var rc = splitPosition.columnIndex; rc < (splitMatrix[splitPosition.rowIndex + sr] || []).length; rc++) {
+            if (splitMatrix[splitPosition.rowIndex + sr][rc] && splitMatrix[splitPosition.rowIndex + sr][rc] !== cell) {
+              splitReference = splitMatrix[splitPosition.rowIndex + sr][rc];
+              break;
+            }
+          }
+          splitRow.insertBefore(splitDownCell, splitReference);
+        }
+      }
+    }
+  },
+  execTableCommand: function (ref, name, value) {
+    if (document.activeElement != ref && ref) {
+      ref.focus();
+    }
+
+    this.captureTableColumnHeaderFormat(ref, value);
+
+    try {
+      if (name === 'insertTable') {
+        return this.insertTable(ref, value);
+      }
+
+      var context = (ref && ref.contextMenuTarget)
+        ? this.getTableContextFromTarget(ref, ref.contextMenuTarget)
+        : this.getTableContext(ref);
+
+      var requiresCell = ['addRowBefore', 'addRowAfter', 'deleteRow', 'addColumnBefore', 'addColumnAfter', 'deleteColumn',
+        'mergeCellRight', 'mergeCellDown', 'splitCell'].includes(name);
+      if (!context.table || (requiresCell && (!context.cell || !context.row))) {
+        return this.createCommandResult(ref, false, 'table.action.requiresTable');
+      }
+
+      var restoresSelection = ['deleteRow', 'deleteColumn', 'updateTable', 'mergeCellRight', 'mergeCellDown'].includes(name);
+      var section = restoresSelection && context.row ? context.row.parentElement : null;
+      var position = context.cell && section ? this.getCellPosition(section, context.cell) : null;
+
+      switch (name) {
+        case 'copyCells': return this.copyTableCells(ref);
+        case 'pasteCells': return this.pasteTableCells(ref, context);
+        case 'updateTable': this.updateTable(context, value); break;
+        case 'addRowBefore':
+        case 'addRowAfter': this.addTableRow(context, name); break;
+        case 'deleteRow': this.deleteTableRow(context); break;
+        case 'addColumnBefore':
+        case 'addColumnAfter': this.addTableColumn(context, name); break;
+        case 'deleteColumn': this.deleteTableColumn(context); break;
+        case 'mergeCellRight':
+          if (!this.mergeTableCellRight(ref, context)) {
+            return this.createCommandResult(ref, false, 'table.merge.invalidSelection');
+          }
+          break;
+        case 'mergeCellDown': this.mergeTableCellDown(context); break;
+        case 'splitCell': this.splitTableCell(context); break;
+        case 'deleteTable': this.deleteTable(context); break;
+      }
+
+      this.ensureTableCellSelection(context, section, position);
+
+      return this.createCommandResult(ref, true);
+    } finally {
+      if (ref) {
+        ref.contextMenuTarget = null;
+      }
+    }
+  },
+  insertTable: function (ref, value) {
+    this.captureTableColumnHeaderFormat(ref, value);
+    document.execCommand('insertHTML', false, this.createTableHTML(ref, value));
+    return this.createCommandResult(ref, true);
+  },
+  captureTableColumnHeaderFormat: function (ref, value) {
+    if (ref && value && typeof value.defaultColumnHeader === 'string' && value.defaultColumnHeader) {
+      ref.tableColumnHeaderFormat = value.defaultColumnHeader;
+    }
+  },
+  copyTableCells: function (ref) {
+    return this.copySelectedTableCells(ref)
+      ? this.createCommandResult(ref, true)
+      : this.createCommandResult(ref, false, 'table.copy.invalidSelection');
+  },
+  pasteTableCells: function (ref, context) {
+    return this.pasteSelectedTableCells(ref, context.cell)
+      ? this.createCommandResult(ref, true)
+      : this.createCommandResult(ref, false, 'table.paste.blocked');
+  },
+  deleteTable: function (context) {
+    context.table.remove();
+  },
+  getEditorHtml: function (ref) {
+    var selected = Array.from(ref.querySelectorAll('img.rz-state-selected')).map(function (element) {
+      return { element: element, className: 'rz-state-selected' };
+    }).concat(Array.from(ref.querySelectorAll('td.rz-html-editor-cell-selected,th.rz-html-editor-cell-selected')).map(function (element) {
+      return { element: element, className: 'rz-html-editor-cell-selected' };
+    }));
+
+    for (var item of selected) {
+      item.element.classList.remove(item.className);
+
+      if (!item.element.getAttribute('class')) {
+        item.element.removeAttribute('class');
+      }
+    }
+
+    var html = ref.innerHTML;
+
+    for (var item of selected) {
+      item.element.classList.add(item.className);
+    }
+
+    return html;
+  },
   queryCommands: function (ref) {
     return {
-      html: ref != null ? ref.innerHTML : null,
+      html: ref != null ? this.getEditorHtml(ref) : null,
       fontName: document.queryCommandValue('fontName'),
       fontSize: document.queryCommandValue('fontSize'),
       formatBlock: document.queryCommandValue('formatBlock'),
@@ -2026,7 +6109,7 @@ window.Radzen = {
   mediaQuery: function(query, instance) {
     if (instance) {
       function callback(event) {
-          instance.invokeMethodAsync('OnChange', event.matches)
+          try { suppressDisposed(instance.invokeMethodAsync('OnChange', event.matches)); } catch { }
       };
       var query = matchMedia(query);
       this.mediaQueries[instance._id] = function() {
@@ -2043,10 +6126,408 @@ window.Radzen = {
     }
   },
   createEditor: function (ref, uploadUrl, paste, instance, shortcuts) {
+    function trackDrag(move, end, key) {
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', end);
+
+      if (key) {
+        document.addEventListener('keydown', key, true);
+      }
+
+      return function () {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', end);
+
+        if (key) {
+          document.removeEventListener('keydown', key, true);
+        }
+      };
+    }
+
+    var imageHandleDirections = {
+      nw: [-1, -1], n: [0, -1], ne: [1, -1],
+      w: [-1, 0], e: [1, 0],
+      sw: [-1, 1], s: [0, 1], se: [1, 1]
+    };
+    var minImageSize = 24;
+
+    ref.getSelectedImage = function () {
+      return ref.querySelector('img.rz-state-selected');
+    };
+
+    ref.getEditorContainer = function () {
+      return ref.closest('.rz-html-editor');
+    };
+
+    ref.removeImageHandles = function () {
+      if (!ref.imageHandles) {
+        return;
+      }
+
+      window.removeEventListener('resize', ref.positionImageHandles);
+      ref.imageHandlesClip.remove();
+      ref.imageHandlesClip = null;
+      ref.imageHandles = null;
+      ref.imageSizeLabel = null;
+      ref.imageSizeLabelSpace = 0;
+    };
+
+    ref.positionImageHandles = function () {
+      if (!ref.imageHandles) {
+        return;
+      }
+
+      var img = ref.getSelectedImage();
+      var container = ref.getEditorContainer();
+
+      if (!img || !container || ref.hidden || !ref.isContentEditable) {
+        ref.removeImageHandles();
+        return;
+      }
+
+      var containerRect = container.getBoundingClientRect();
+      var contentRect = ref.getBoundingClientRect();
+      var imgRect = img.getBoundingClientRect();
+      var clipLeft = contentRect.left - containerRect.left - container.clientLeft;
+      var clipTop = contentRect.top - containerRect.top - container.clientTop;
+
+      ref.imageHandlesClip.style.left = clipLeft + 'px';
+      ref.imageHandlesClip.style.top = clipTop + 'px';
+      ref.imageHandlesClip.style.width = contentRect.width + 'px';
+      ref.imageHandlesClip.style.height = contentRect.height + 'px';
+
+      ref.imageHandles.style.left = (imgRect.left - contentRect.left) + 'px';
+      ref.imageHandles.style.top = (imgRect.top - contentRect.top) + 'px';
+      ref.imageHandles.style.width = imgRect.width + 'px';
+      ref.imageHandles.style.height = imgRect.height + 'px';
+
+      var label = ref.imageSizeLabel;
+
+      if (label && !label.hidden) {
+        label.textContent = Math.round(imgRect.width) + ' × ' + Math.round(imgRect.height);
+        label.classList.toggle('rz-inside', imgRect.bottom + ref.imageSizeLabelSpace > contentRect.bottom);
+      }
+    };
+
+    ref.createImageHandles = function () {
+      ref.removeImageHandles();
+
+      var img = ref.getSelectedImage();
+      var container = ref.getEditorContainer();
+
+      if (!img || !container || !ref.isContentEditable) {
+        return;
+      }
+
+      var clip = document.createElement('div');
+      clip.className = 'rz-html-editor-image-clip';
+      clip.setAttribute('contenteditable', 'false');
+
+      var handles = document.createElement('div');
+      handles.className = 'rz-html-editor-image-handles';
+
+      Object.keys(imageHandleDirections).forEach(function (position) {
+        var handle = document.createElement('div');
+        handle.className = 'rz-html-editor-image-handle rz-' + position;
+        handle.dataset.position = position;
+        handle.addEventListener('mousedown', ref.imageResizeStartListener);
+        handles.appendChild(handle);
+      });
+
+      ref.imageSizeLabel = document.createElement('div');
+      ref.imageSizeLabel.className = 'rz-html-editor-image-size';
+      ref.imageSizeLabel.hidden = true;
+      handles.appendChild(ref.imageSizeLabel);
+
+      clip.appendChild(handles);
+      container.appendChild(clip);
+      ref.imageHandlesClip = clip;
+      ref.imageHandles = handles;
+
+      window.addEventListener('resize', ref.positionImageHandles);
+      ref.positionImageHandles();
+    };
+
+    ref.showImageSizeLabel = function (visible) {
+      var label = ref.imageSizeLabel;
+
+      if (!label) {
+        return;
+      }
+
+      label.hidden = !visible;
+
+      if (visible) {
+        label.textContent = '0 × 0';
+        ref.imageSizeLabelSpace = label.offsetHeight + parseFloat(getComputedStyle(label).marginTop || 0);
+      }
+    };
+
+    ref.imageResizeStartListener = function (e) {
+      var img = ref.getSelectedImage();
+
+      if (!img || ref.imageResize) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      ref.imageResize = {
+        img: img,
+        direction: imageHandleDirections[e.currentTarget.dataset.position],
+        startX: e.clientX,
+        startY: e.clientY,
+        startWidth: img.offsetWidth,
+        startHeight: img.offsetHeight,
+        startAttributes: { width: img.getAttribute('width'), height: img.getAttribute('height') },
+        startStyles: { width: img.style.width, height: img.style.height },
+        ratio: img.offsetHeight ? img.offsetWidth / img.offsetHeight : 1
+      };
+
+      img.style.width = '';
+      img.style.height = '';
+      img.setAttribute('width', ref.imageResize.startWidth);
+      img.setAttribute('height', ref.imageResize.startHeight);
+
+      ref.releaseImageDrag = trackDrag(
+        ref.documentImageResizeMoveListener,
+        ref.documentImageResizeEndListener,
+        ref.documentImageResizeKeyListener);
+      ref.showImageSizeLabel(true);
+      ref.positionImageHandles();
+    };
+
+    ref.restoreImageSize = function (state) {
+      Object.keys(state.startAttributes).forEach(function (name) {
+        var value = state.startAttributes[name];
+
+        if (value !== null) {
+          state.img.setAttribute(name, value);
+        } else {
+          state.img.removeAttribute(name);
+        }
+
+        state.img.style[name] = state.startStyles[name];
+      });
+    };
+
+    ref.documentImageResizeKeyListener = function (e) {
+      if (e.key !== 'Escape' || !ref.imageResize) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      ref.restoreImageSize(ref.imageResize);
+      ref.stopImageDrag();
+      ref.positionImageHandles();
+    };
+
+    ref.documentImageResizeMoveListener = function (e) {
+      var state = ref.imageResize;
+
+      if (!state || !ref.isConnected) {
+        return;
+      }
+
+      e.preventDefault();
+
+      var horizontal = state.direction[0];
+      var vertical = state.direction[1];
+      var width = state.startWidth;
+      var height = state.startHeight;
+
+      if (horizontal) {
+        width = Math.max(Math.round(state.startWidth + horizontal * (e.clientX - state.startX)), minImageSize);
+      }
+
+      if (vertical && (!horizontal || e.shiftKey)) {
+        height = Math.max(Math.round(state.startHeight + vertical * (e.clientY - state.startY)), minImageSize);
+      } else if (horizontal && vertical) {
+        height = Math.max(Math.round(width / state.ratio), minImageSize);
+      }
+
+      state.img.setAttribute('width', width);
+      state.img.setAttribute('height', height);
+
+      ref.positionImageHandles();
+    };
+
+    ref.documentImageResizeEndListener = function () {
+      var state = ref.imageResize;
+
+      if (!state) {
+        return;
+      }
+
+      var img = state.img;
+      var width = img.getAttribute('width');
+      var height = img.getAttribute('height');
+
+      var index = Array.prototype.indexOf.call(ref.querySelectorAll('img'), img);
+
+      ref.stopImageDrag();
+      ref.restoreImageSize(state);
+
+      if (width === String(state.startWidth) && height === String(state.startHeight)) {
+        ref.positionImageHandles();
+        return;
+      }
+
+      ref.deselectImage(img);
+
+      var target = img;
+
+      while (target.parentElement && target.parentElement !== ref && getComputedStyle(target.parentElement).display === 'inline') {
+        target = target.parentElement;
+      }
+
+      var replacement = target.cloneNode(true);
+      var replacementImg = target === img
+        ? replacement
+        : replacement.querySelectorAll('img')[Array.prototype.indexOf.call(target.querySelectorAll('img'), img)];
+
+      replacementImg.setAttribute('width', width);
+      replacementImg.setAttribute('height', height);
+      replacementImg.style.width = '';
+      replacementImg.style.height = '';
+
+      if (!replacementImg.style.length) {
+        replacementImg.removeAttribute('style');
+      }
+
+      var range = document.createRange();
+      range.selectNode(target);
+      var selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      ref.focus();
+      document.execCommand('insertHTML', false, replacement.outerHTML);
+
+      ref.selectImage(ref.querySelectorAll('img')[index]);
+    };
+
+    ref.deselectImage = function (img) {
+      img.classList.remove('rz-state-selected');
+
+      if (!img.getAttribute('class')) {
+        img.removeAttribute('class');
+      }
+
+      ref.removeImageHandles();
+    };
+
+    ref.selectImage = function (img) {
+      if (!img) {
+        ref.removeImageHandles();
+        return;
+      }
+
+      img.classList.add('rz-state-selected');
+
+      var range = document.createRange();
+      range.selectNode(img);
+      var selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      ref.createImageHandles();
+    };
+
+    ref.imageHandlesObserver = new MutationObserver(ref.positionImageHandles);
+
+    ref.stopImageDrag = function () {
+      ref.imageResize = null;
+      ref.showImageSizeLabel(false);
+
+      if (ref.releaseImageDrag) {
+        ref.releaseImageDrag();
+        ref.releaseImageDrag = null;
+      }
+    };
+
     ref.inputListener = function () {
-      instance.invokeMethodAsync('OnChange', ref.innerHTML);
+      ref.positionImageHandles();
+      try { suppressDisposed(instance.invokeMethodAsync('OnChange', Radzen.getEditorHtml(ref))); } catch { }
     };
     ref.keydownListener = function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        var currentCell = e.target && e.target.closest ? e.target.closest('td,th') : null;
+        if (currentCell && ref.contains(currentCell)) {
+          if (!currentCell.classList.contains('rz-html-editor-cell-selected')) {
+            Radzen.clearSelectedTableCells(ref);
+            currentCell.classList.add('rz-html-editor-cell-selected');
+          }
+          e.preventDefault();
+          Radzen.copySelectedTableCells(ref);
+          return;
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        var pasteCell = e.target && e.target.closest ? e.target.closest('td,th') : null;
+        if (pasteCell && ref.contains(pasteCell) && ref.copiedCells && ref.copiedCells.matrix) {
+          e.preventDefault();
+          Radzen.pasteSelectedTableCells(ref, pasteCell);
+          try { suppressDisposed(instance.invokeMethodAsync('OnChange', Radzen.getEditorHtml(ref))); } catch { }
+          return;
+        }
+      }
+
+      if (e.key === 'Tab') {
+        var activeCell = e.target && e.target.closest ? e.target.closest('td,th') : null;
+        if (activeCell && ref.contains(activeCell)) {
+          e.preventDefault();
+          var activeRow = activeCell.parentElement;
+          var section = activeRow ? activeRow.parentElement : null;
+          var matrix = Radzen.getCellMatrix(section);
+          var activePosition = Radzen.getCellPosition(section, activeCell, matrix);
+          var rowIndex = activePosition.rowIndex;
+          var columnIndex = activePosition.columnIndex;
+          var colSpan = Math.max(parseInt(activeCell.getAttribute('colspan') || 1, 10) || 1, 1);
+          var rowSpan = Math.max(parseInt(activeCell.getAttribute('rowspan') || 1, 10) || 1, 1);
+          var nextColumnIndex = e.shiftKey ? columnIndex - 1 : columnIndex + colSpan;
+          var nextRowIndex = rowIndex;
+
+          if (nextColumnIndex < 0) {
+            nextRowIndex = Math.max(rowIndex - 1, 0);
+            nextColumnIndex = Math.max((matrix[nextRowIndex] || []).length - 1, 0);
+          }
+
+          while (matrix[nextRowIndex] && !matrix[nextRowIndex][nextColumnIndex] && nextColumnIndex >= 0) {
+            nextColumnIndex += e.shiftKey ? -1 : 1;
+          }
+
+          if ((!matrix[nextRowIndex] || !matrix[nextRowIndex][nextColumnIndex]) && !e.shiftKey) {
+            nextRowIndex = rowIndex + rowSpan;
+            nextColumnIndex = 0;
+          }
+
+          var nextCell = (matrix[nextRowIndex] || [])[nextColumnIndex];
+          if (!nextCell && !e.shiftKey && section && activeRow && activeRow.parentElement && activeRow.parentElement.tagName === 'TBODY') {
+            var table = activeCell.closest('table');
+            if (table) {
+              Radzen.execTableCommand(ref, 'addRowAfter');
+              matrix = Radzen.getCellMatrix(section);
+              nextRowIndex = Math.min(rowIndex + rowSpan, matrix.length - 1);
+              nextCell = (matrix[nextRowIndex] || [])[0];
+            }
+          }
+
+          if (nextCell) {
+            var range = document.createRange();
+            range.selectNodeContents(nextCell);
+            range.collapse(true);
+            var selection = getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            ref.focus();
+          }
+          return;
+        }
+      }
+
       var key = '';
       if (e.ctrlKey || e.metaKey) {
         key += 'Ctrl+';
@@ -2061,7 +6542,7 @@ window.Radzen = {
 
       if (shortcuts.includes(key)) {
         e.preventDefault();
-        instance.invokeMethodAsync('ExecuteShortcutAsync', key);
+        try { suppressDisposed(instance.invokeMethodAsync('ExecuteShortcutAsync', key)); } catch { }
       }
     };
 
@@ -2072,33 +6553,132 @@ window.Radzen = {
         }
 
         for (var img of ref.querySelectorAll('img.rz-state-selected')) {
-          img.classList.remove('rz-state-selected');
+          ref.deselectImage(img);
         }
 
         if (e.target.matches('img')) {
-          e.target.classList.add('rz-state-selected');
-          var range = document.createRange();
-          range.selectNode(e.target);
-          getSelection().removeAllRanges();
-          getSelection().addRange(range);
+          ref.selectImage(e.target);
+        } else {
+          var clickedCell = e.target.closest && e.target.closest('td,th');
+          if (clickedCell && ref.contains(clickedCell)) {
+            if (e.shiftKey && ref.lastSelectedTableCell) {
+              Radzen.selectTableCellRange(ref, ref.lastSelectedTableCell, clickedCell);
+            } else if (e.ctrlKey || e.metaKey) {
+              clickedCell.classList.toggle('rz-html-editor-cell-selected');
+            } else {
+              Radzen.clearSelectedTableCells(ref);
+              clickedCell.classList.add('rz-html-editor-cell-selected');
+            }
+            ref.lastSelectedTableCell = clickedCell;
+          } else {
+            Radzen.clearSelectedTableCells(ref);
+            ref.lastSelectedTableCell = null;
+          }
         }
       }
     }
 
+    ref.contextMenuListener = function (e) {
+      var cell = e.target && e.target.closest ? e.target.closest('td,th') : null;
+      if (cell && ref.contains(cell)) {
+        if (!cell.classList.contains('rz-html-editor-cell-selected')) {
+          Radzen.clearSelectedTableCells(ref);
+          cell.classList.add('rz-html-editor-cell-selected');
+        }
+        ref.lastSelectedTableCell = cell;
+        ref.contextMenuTarget = cell;
+        ref.focus({ preventScroll: true });
+        var selection = getSelection();
+        if (!cell.contains(selection.focusNode)) {
+          var range = document.createRange();
+          range.selectNodeContents(cell);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        Radzen.saveSelection(ref);
+        e.preventDefault();
+        try { instance.invokeMethodAsync('OnContextMenu', e.clientX, e.clientY); } catch { }
+      }
+    }
+
+    ref.mousemoveListener = function (e) {
+      var hoveredCell = e.target && e.target.closest ? e.target.closest('td,th') : null;
+      if (!hoveredCell || !ref.contains(hoveredCell)) {
+        ref.style.cursor = '';
+        return;
+      }
+
+      var rect = hoveredCell.getBoundingClientRect();
+      var nearRightEdge = Math.abs(rect.right - e.clientX) < 6;
+      if (nearRightEdge) {
+        ref.style.cursor = 'col-resize';
+        ref.resizeTargetCell = hoveredCell;
+      } else if (!ref.isResizingColumn) {
+        ref.style.cursor = '';
+        ref.resizeTargetCell = null;
+      }
+    };
+
+    ref.mousedownResizeListener = function (e) {
+      if (ref.resizeTargetCell && ref.style.cursor === 'col-resize') {
+        e.preventDefault();
+        ref.isResizingColumn = true;
+        ref.resizeStartX = e.clientX;
+        ref.resizeStartWidth = ref.resizeTargetCell.getBoundingClientRect().width;
+        ref.releaseColumnDrag = trackDrag(ref.documentMouseMoveResizeListener, ref.mouseupResizeListener);
+      }
+    };
+
+    ref.mouseupResizeListener = function () {
+      if (ref.isResizingColumn) {
+        ref.isResizingColumn = false;
+        ref.style.cursor = '';
+        ref.releaseColumnDrag();
+        ref.releaseColumnDrag = null;
+        ref.inputListener();
+      }
+    };
+
+    ref.documentMouseMoveResizeListener = function (e) {
+      if (ref.isResizingColumn && ref.resizeTargetCell && ref.isConnected) {
+        var width = Math.max(ref.resizeStartWidth + (e.clientX - ref.resizeStartX), 24);
+        var resizeSection = ref.resizeTargetCell.parentElement ? ref.resizeTargetCell.parentElement.parentElement : null;
+        var resizeMatrix = Radzen.getCellMatrix(resizeSection);
+        var resizePosition = Radzen.getCellPosition(resizeSection, ref.resizeTargetCell, resizeMatrix);
+        var resizeColumnIndex = resizePosition.columnIndex;
+        for (var resizeRowIndex = 0; resizeRowIndex < resizeMatrix.length; resizeRowIndex++) {
+          var resizeCell = resizeMatrix[resizeRowIndex][resizeColumnIndex];
+          if (resizeCell) {
+            resizeCell.style.width = width + 'px';
+          }
+        }
+      }
+    };
+
     ref.selectionChangeListener = function () {
       if (document.activeElement == ref) {
-        instance.invokeMethodAsync('OnSelectionChange');
+        var selectedImage = ref.getSelectedImage();
+
+        if (selectedImage && !ref.imageResize && !getSelection().containsNode(selectedImage)) {
+          ref.deselectImage(selectedImage);
+        }
+
+        try { suppressDisposed(instance.invokeMethodAsync('OnSelectionChange')); } catch { }
       }
     };
     ref.handleInsert = function (e, transfer, hasDelegate) {
+      var hasFiles = transfer.files.length > 0;
+      var hasHtml = transfer.types.indexOf('text/html') > -1;
+      var hasText = transfer.types.indexOf('text/plain') > -1;
 
-      if (transfer.files.length > 0) {
+      if (hasFiles && !hasHtml && !hasText) {
         for (const file of transfer.files) {
           ref.handleFileInsert(e, file, hasDelegate);
-          }
+        }
       }
       else if (hasDelegate) {
-        ref.handleTextInsert(e, transfer)
+        ref.handleTextInsert(e, transfer);
       }
     };
     ref.handleFileInsert = function (event, file, hasDelegate) {
@@ -2115,36 +6695,36 @@ window.Radzen = {
               var result = JSON.parse(xhr.responseText);
               var html = '<img src="' + result.url + '">';
               if (hasDelegate) {
-                instance.invokeMethodAsync('OnPaste', html)
+                try { instance.invokeMethodAsync('OnPaste', html)
                   .then(function (html) {
                     document.execCommand("insertHTML", false, html);
-                  });
+                  }); } catch { }
               } else {
                 document.execCommand("insertHTML", false, '<img src="' + result.url + '">');
               }
-              instance.invokeMethodAsync('OnUploadComplete', xhr.responseText);
+              try { suppressDisposed(instance.invokeMethodAsync('OnUploadComplete', xhr.responseText)); } catch { }
             } else {
-              instance.invokeMethodAsync('OnError', xhr.responseText);
+              try { suppressDisposed(instance.invokeMethodAsync('OnError', xhr.responseText)); } catch { }
             }
           }
         }
-        instance.invokeMethodAsync('GetHeaders').then(function (headers) {
+        try { instance.invokeMethodAsync('GetHeaders').then(function (headers) {
           xhr.open('POST', uploadUrl, true);
           for (var name in headers) {
             xhr.setRequestHeader(name, headers[name]);
           }
           xhr.send(data);
-        });
+        }); } catch { }
       } else {
         var reader = new FileReader();
         reader.onload = function (e) {
           var html = '<img src="' + e.target.result + '">';
 
           if (hasDelegate) {
-            instance.invokeMethodAsync('OnPaste', html)
+            try { instance.invokeMethodAsync('OnPaste', html)
               .then(function (html) {
                 document.execCommand("insertHTML", false, html);
-              });
+              }); } catch { }
             } else {
               document.execCommand("insertHTML", false, html);
             }
@@ -2169,11 +6749,11 @@ window.Radzen = {
         data = data.substring(startIndex + startMarker.length, endIndex).trim();
       }
 
-      instance.invokeMethodAsync('OnPaste', data)
+      try { instance.invokeMethodAsync('OnPaste', data)
         .then(ref.focus())
         .then(function (html) {
           document.execCommand("insertHTML", false, html);
-        });
+        }); } catch { }
     }
     ref.pasteListener = function (e) {
       ref.handleInsert(e, e.clipboardData, paste);
@@ -2186,18 +6766,51 @@ window.Radzen = {
     ref.addEventListener('drop', ref.dropListener);
     ref.addEventListener('keydown', ref.keydownListener);
     ref.addEventListener('click', ref.clickListener);
+    ref.addEventListener('contextmenu', ref.contextMenuListener);
+    ref.addEventListener('mousemove', ref.mousemoveListener);
+    ref.addEventListener('mousedown', ref.mousedownResizeListener);
+    ref.addEventListener('scroll', ref.positionImageHandles);
+    ref.imageHandlesObserver.observe(ref, { attributes: true, attributeFilter: ['hidden', 'contenteditable'], childList: true });
     document.addEventListener('selectionchange', ref.selectionChangeListener);
     document.execCommand('styleWithCSS', false, true);
+    return {
+      dispose: function () {
+        if (ref) {
+          ref.removeEventListener('input', ref.inputListener);
+          ref.removeEventListener('paste', ref.pasteListener);
+          ref.removeEventListener('drop', ref.dropListener);
+          ref.removeEventListener('keydown', ref.keydownListener);
+          ref.removeEventListener('click', ref.clickListener);
+          ref.removeEventListener('contextmenu', ref.contextMenuListener);
+          ref.removeEventListener('mousemove', ref.mousemoveListener);
+          ref.removeEventListener('mousedown', ref.mousedownResizeListener);
+          ref.removeEventListener('scroll', ref.positionImageHandles);
+          ref.imageHandlesObserver.disconnect();
+          ref.stopImageDrag();
+          ref.removeImageHandles();
+          ref.isResizingColumn = false;
+
+          if (ref.releaseColumnDrag) {
+            ref.releaseColumnDrag();
+            ref.releaseColumnDrag = null;
+          }
+          document.removeEventListener('selectionchange', ref.selectionChangeListener);
+        }
+      }
+    };
   },
   saveSelection: function (ref) {
-    if (document.activeElement == ref) {
-      var selection = getSelection();
-      if (selection.rangeCount > 0) {
-        ref.range = selection.getRangeAt(0);
+    if (!ref) return;
+    var selection = getSelection();
+    if (selection.rangeCount > 0) {
+      var range = selection.getRangeAt(0);
+      if (ref.contains(range.commonAncestorContainer)) {
+        ref.range = range;
       }
     }
   },
   restoreSelection: function (ref) {
+    if (!ref) return;
     var range = ref.range;
     if (range) {
       delete ref.range;
@@ -2255,35 +6868,31 @@ window.Radzen = {
       return result;
     }, { innerText: selection.toString(), innerHTML: innerHTML });
   },
-  destroyEditor: function (ref) {
-    if (ref) {
-      ref.removeEventListener('input', ref.inputListener);
-      ref.removeEventListener('paste', ref.pasteListener);
-      ref.removeEventListener('drop', ref.dropListener);
-      ref.removeEventListener('keydown', ref.keydownListener);
-      ref.removeEventListener('click', ref.clickListener);
-      document.removeEventListener('selectionchange', ref.selectionChangeListener);
-    }
-  },
   startDrag: function (ref, instance, handler) {
     if (!ref) {
         return { left: 0, top: 0, width: 0, height: 0 };
     }
+    Radzen.endDrag(ref);
     ref.mouseMoveHandler = function (e) {
-      instance.invokeMethodAsync(handler, { clientX: e.clientX, clientY: e.clientY });
+      try { suppressDisposed(instance.invokeMethodAsync(handler, { clientX: e.clientX, clientY: e.clientY })); } catch { }
     };
     ref.touchMoveHandler = function (e) {
       if (e.targetTouches[0] && ref.contains(e.targetTouches[0].target)) {
-        instance.invokeMethodAsync(handler, { clientX: e.targetTouches[0].clientX, clientY: e.targetTouches[0].clientY });
+        try { suppressDisposed(instance.invokeMethodAsync(handler, { clientX: e.targetTouches[0].clientX, clientY: e.targetTouches[0].clientY })); } catch { }
       }
     };
     ref.mouseUpHandler = function (e) {
       Radzen.endDrag(ref);
     };
+    ref.dragStartHandler = function (e) {
+      e.preventDefault();
+    };
     document.addEventListener('mousemove', ref.mouseMoveHandler);
     document.addEventListener('mouseup', ref.mouseUpHandler);
     document.addEventListener('touchmove', ref.touchMoveHandler, { passive: true, capture: true })
     document.addEventListener('touchend', ref.mouseUpHandler, { passive: true });
+    document.addEventListener('dragstart', ref.dragStartHandler);
+    document.addEventListener('dragend', ref.mouseUpHandler);
     return Radzen.clientRect(ref);
   },
   submit: function (form) {
@@ -2296,13 +6905,40 @@ window.Radzen = {
     var rect = el.getBoundingClientRect();
     return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
   },
+  outerHTML: function (arg) {
+    var el = arg instanceof Element || arg instanceof HTMLDocument
+        ? arg
+        : document.getElementById(arg);
+    return el ? el.outerHTML : '';
+  },
   endDrag: function (ref) {
     document.removeEventListener('mousemove', ref.mouseMoveHandler);
     document.removeEventListener('mouseup', ref.mouseUpHandler);
     document.removeEventListener('touchmove', ref.touchMoveHandler)
     document.removeEventListener('touchend', ref.mouseUpHandler);
+    document.removeEventListener('dragstart', ref.dragStartHandler);
+    document.removeEventListener('dragend', ref.mouseUpHandler);
   },
-  startColumnReorder: function(id) {
+  capturePointer: function (el, pointerId) {
+    try {
+      if (el && el.setPointerCapture) {
+        el.setPointerCapture(pointerId);
+      }
+    } catch (e) { /* ignore */ }
+  },
+  releasePointer: function (el, pointerId) {
+    try {
+      if (el && el.releasePointerCapture && (!el.hasPointerCapture || el.hasPointerCapture(pointerId))) {
+        el.releasePointerCapture(pointerId);
+      }
+    } catch (e) { /* ignore */ }
+  },
+  startColumnReorder: function(id, gridId, gridRef) {
+      if (Radzen[id + 'reorderCleanup']) {
+          Radzen[id + 'reorderCleanup']();
+      }
+
+      var grid = document.getElementById(gridId);
       var el = document.getElementById(id + '-drag');
       var cell = el.parentNode.parentNode;
       var visual = document.createElement("th");
@@ -2313,6 +6949,7 @@ window.Radzen = {
       visual.style.height = cell.offsetHeight + 'px';
       visual.style.width = cell.offsetWidth + 'px';
       visual.style.zIndex = 2000;
+      visual.style.pointerEvents = 'none';
       visual.innerHTML = cell.firstChild.outerHTML;
       visual.id = id + 'visual';
       document.body.appendChild(visual);
@@ -2322,25 +6959,139 @@ window.Radzen = {
           resizers[i].style.display = 'none';
       }
 
-      Radzen[id + 'end'] = function (e) {
-          var el = document.getElementById(id + 'visual');
-          if (el) {
-              document.body.removeChild(el);
-              Radzen[id + 'end'] = null;
-              Radzen[id + 'move'] = null;
-              var resizers = cell.parentNode.querySelectorAll('.rz-column-resizer');
-              for (let i = 0; i < resizers.length; i++) {
-                  resizers[i].style.display = 'block';
+      var lastTouchX = null;
+      var lastTouchY = null;
+      var scroller = grid.querySelector('.rz-data-grid-data');
+      var autoScrollSpeed = 0;
+      var autoScrollFrame = null;
+
+      var stopAutoScroll = function () {
+          if (autoScrollFrame) {
+              cancelAnimationFrame(autoScrollFrame);
+          }
+          autoScrollFrame = null;
+          autoScrollSpeed = 0;
+      };
+
+      var autoScrollStep = function () {
+          autoScrollFrame = null;
+          if (!autoScrollSpeed || !scroller) {
+              return;
+          }
+          var before = scroller.scrollLeft;
+          scroller.scrollLeft = before + autoScrollSpeed;
+          if (Math.abs(scroller.scrollLeft - before) >= 0.5) {
+              autoScrollFrame = requestAnimationFrame(autoScrollStep);
+          }
+      };
+
+      var updateAutoScroll = function (clientX, clientY) {
+          if (!scroller || scroller.scrollWidth <= scroller.clientWidth) {
+              return;
+          }
+          var gridRect = grid.getBoundingClientRect();
+          var speed = 0;
+          if (clientY >= gridRect.top && clientY <= gridRect.bottom) {
+              var rect = scroller.getBoundingClientRect();
+              var left = rect.left;
+              var right = rect.right;
+              var middle = (rect.left + rect.right) / 2;
+              var frozen = scroller.querySelectorAll('thead th.rz-frozen-cell');
+              for (var i = 0; i < frozen.length; i++) {
+                  var frozenRect = frozen[i].getBoundingClientRect();
+                  if (frozenRect.width === 0) {
+                      continue;
+                  }
+                  if ((frozenRect.left + frozenRect.right) / 2 < middle) {
+                      left = Math.max(left, frozenRect.right);
+                  } else {
+                      right = Math.min(right, frozenRect.left);
+                  }
+              }
+              var visible = right - left;
+              if (visible > 0) {
+                  var zone = Math.max(24, Math.min(80, visible * 0.15));
+                  var depth = 0;
+                  if (clientX < left + zone) {
+                      depth = -(left + zone - clientX);
+                  } else if (clientX > right - zone) {
+                      depth = clientX - (right - zone);
+                  }
+                  if (depth) {
+                      var ratio = Math.min(1, Math.abs(depth) / zone);
+                      speed = Math.sign(depth) * Math.ceil(2 + 18 * ratio * ratio);
+                  }
               }
           }
-      }
-      document.removeEventListener('click', Radzen[id + 'end']);
-      document.addEventListener('click', Radzen[id + 'end']);
+          autoScrollSpeed = speed;
+          if (speed && !autoScrollFrame) {
+              autoScrollFrame = requestAnimationFrame(autoScrollStep);
+          }
+      };
 
-      Radzen[id + 'move'] = function (e) {
-          var el = document.getElementById(id + 'visual');
-          if (el) {
-              el.style.display = 'block';
+      var cleanup = function () {
+          stopAutoScroll();
+
+          var ghost = document.getElementById(id + 'visual');
+          if (ghost && ghost.parentNode) {
+              ghost.parentNode.removeChild(ghost);
+          }
+          var resizers = cell.parentNode ? cell.parentNode.querySelectorAll('.rz-column-resizer') : [];
+          for (let i = 0; i < resizers.length; i++) {
+              resizers[i].style.display = 'block';
+          }
+
+          document.removeEventListener('mousemove', move);
+          grid.removeEventListener('touchmove', touchmove);
+          grid.removeEventListener('click', end);
+          document.removeEventListener('mouseup', end);
+          document.removeEventListener('touchend', end);
+          document.removeEventListener('touchcancel', end);
+
+          if (Radzen[id + 'reorderCleanup'] === cleanup) {
+              Radzen[id + 'reorderCleanup'] = null;
+          }
+      };
+
+      var end = function (e) {
+          var triggeredByTouch = e && (e.type === 'touchend' || e.type === 'touchcancel');
+          var touchX = lastTouchX;
+          var touchY = lastTouchY;
+          if (triggeredByTouch && e.changedTouches && e.changedTouches[0]) {
+              touchX = e.changedTouches[0].clientX;
+              touchY = e.changedTouches[0].clientY;
+          }
+
+          cleanup();
+
+          if (triggeredByTouch && gridRef && touchX != null && touchY != null) {
+              var target = document.elementFromPoint(touchX, touchY);
+              if (target && grid.contains(target)) {
+                  var groupHeader = target.closest('.rz-group-header');
+                  if (groupHeader && grid.contains(groupHeader)) {
+                      try { gridRef.invokeMethodAsync('RadzenGrid.OnColumnDropToGroup'); } catch { }
+                      return;
+                  }
+                  var th = target.closest('th[data-column-index]');
+                  if (th && grid.contains(th)) {
+                      var columnIndex = parseInt(th.getAttribute('data-column-index'), 10);
+                      if (!isNaN(columnIndex)) {
+                          try { gridRef.invokeMethodAsync('RadzenGrid.OnColumnReorderEnded', columnIndex); } catch { }
+                      }
+                  }
+              }
+          }
+      };
+
+      var move = function (e) {
+          if (e.buttons === 0 || !grid.isConnected) {
+              cleanup();
+              return;
+          }
+
+          var ghost = document.getElementById(id + 'visual');
+          if (ghost) {
+              ghost.style.display = 'block';
 
               if (/Edge/.test(navigator.userAgent)) {
                   var scrollLeft = document.body.scrollLeft;
@@ -2350,97 +7101,213 @@ window.Radzen = {
                   var scrollTop = document.documentElement.scrollTop;
               }
 
-              el.style.top = e.clientY + scrollTop + 10 + 'px';
-              el.style.left = e.clientX + scrollLeft + 10 + 'px';
+              ghost.style.top = e.clientY + scrollTop + 10 + 'px';
+              ghost.style.left = e.clientX + scrollLeft + 10 + 'px';
           }
-      }
-      document.removeEventListener('mousemove', Radzen[id + 'move']);
-      document.addEventListener('mousemove', Radzen[id + 'move']);
+          updateAutoScroll(e.clientX, e.clientY);
+      };
+
+      var touchmove = function (e) {
+          if (e.touches && e.touches[0]) {
+              lastTouchX = e.touches[0].clientX;
+              lastTouchY = e.touches[0].clientY;
+              move({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+              if (e.cancelable) {
+                  e.preventDefault();
+              }
+          }
+      };
+
+      Radzen[id + 'reorderCleanup'] = cleanup;
+
+      grid.addEventListener('click', end);
+      document.addEventListener('mouseup', end);
+      document.addEventListener('touchend', end, { passive: true });
+      document.addEventListener('touchcancel', end, { passive: true });
+      document.addEventListener('mousemove', move);
+      grid.addEventListener('touchmove', touchmove, { passive: false });
   },
   stopColumnResize: function (id, grid, columnIndex) {
-    var el = document.getElementById(id + '-resizer');
-    if(!el) return;
-    var cell = el.parentNode.parentNode;
-    if (!cell) return;
-    if (Radzen[el]) {
-        grid.invokeMethodAsync(
-            'RadzenGrid.OnColumnResized',
-            columnIndex,
-            cell.getBoundingClientRect().width
-        );
-        el.style.width = null;
-        document.removeEventListener('mousemove', Radzen[el].mouseMoveHandler);
-        document.removeEventListener('mouseup', Radzen[el].mouseUpHandler);
-        document.removeEventListener('touchmove', Radzen[el].touchMoveHandler)
-        document.removeEventListener('touchend', Radzen[el].mouseUpHandler);
-        Radzen[el] = null;
+    var resize = Radzen[id + 'columnResize'];
+    if (resize) {
+        resize.mouseUpHandler();
     }
+  },
+  // A grid rendered inside another grid's row-detail template is a descendant of it, so every lookup
+  // here is scoped to this grid's own table and to a row's own cells. Descendant queries reach the
+  // inner grid and pin its cells to the outer grid's offsets.
+  frozenCellsOf: function(row, side) {
+      var found = [];
+      if (!row) return found;
+      var prefix = 'rz-frozen-cell-' + side;
+      for (var i = 0; i < row.children.length; i++) {
+          var cell = row.children[i];
+          if (cell.classList.contains(prefix)
+              || cell.classList.contains(prefix + '-end')
+              || cell.classList.contains(prefix + '-inner')) {
+              found.push(cell);
+          }
+      }
+      return found;
+  },
+  updateFrozenColumnPositions: function(gridElement) {
+      if (!gridElement) return;
+      // This grid's own table. querySelector returns the first in document order, which is this
+      // grid's rather than one nested inside it.
+      var table = gridElement.querySelector('.rz-grid-table');
+      if (!table) return;
+      // Get frozen cell positions from the header row first, then apply to all rows
+      var headerRow = table.querySelector(':scope > thead > tr');
+      if (!headerRow) return;
+      var leftHeaderCells = Radzen.frozenCellsOf(headerRow, 'left');
+      var rightHeaderCells = Radzen.frozenCellsOf(headerRow, 'right');
+      // Calculate offsets from header widths
+      var leftOffsets = [];
+      var offset = 0;
+      for (var i = 0; i < leftHeaderCells.length; i++) {
+          leftOffsets.push(offset);
+          offset += leftHeaderCells[i].getBoundingClientRect().width;
+      }
+      var rightOffsets = [];
+      offset = 0;
+      for (var i = rightHeaderCells.length - 1; i >= 0; i--) {
+          rightOffsets[i] = offset;
+          offset += rightHeaderCells[i].getBoundingClientRect().width;
+      }
+      // Apply offsets to this grid's own rows
+      var rows = table.querySelectorAll(':scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr');
+      for (var r = 0; r < rows.length; r++) {
+          var row = rows[r];
+          var leftCells = Radzen.frozenCellsOf(row, 'left');
+          for (var i = 0; i < leftCells.length && i < leftOffsets.length; i++) {
+              leftCells[i].style.setProperty('inset-inline-start', leftOffsets[i] + 'px');
+          }
+          var rightCells = Radzen.frozenCellsOf(row, 'right');
+          for (var i = 0; i < rightCells.length && i < rightOffsets.length; i++) {
+              rightCells[i].style.setProperty('inset-inline-end', rightOffsets[i] + 'px');
+          }
+      }
   },
   startColumnResize: function(id, grid, columnIndex, clientX) {
       var el = document.getElementById(id + '-resizer');
+      var resizeKey = id + 'columnResize';
       var cell = el.parentNode.parentNode;
       var col = document.getElementById(id + '-col');
-      var dataCol = document.getElementById(id + '-data-col');
-      var footerCol = document.getElementById(id + '-footer-col');
-      Radzen[el] = {
+      var gridElement = cell.closest('.rz-data-grid');
+      var hasFrozenColumns = gridElement != null && gridElement.querySelector('.rz-frozen-cell') != null;
+      var table = cell.closest('.rz-grid-table');
+      var colgroup = table ? table.querySelector(':scope > colgroup') : null;
+      var allColumns = colgroup ? Array.from(colgroup.children) : [];
+      var headerCells = cell.parentNode.children.length === allColumns.length
+          ? Array.from(cell.parentNode.children)
+          : [];
+      var pinned = allColumns.map(function (column) {
+          return column === col || !!column.style.width || !column.id.endsWith('-col');
+      });
+      var columns = [];
+      var bounds = [];
+      allColumns.forEach(function (column, index) {
+          if (!column.id.endsWith('-col')) return;
+          var style = getComputedStyle(headerCells[index] || column);
+          columns.push(column);
+          bounds.push({
+              min: parseFloat(style.minWidth) || 0,
+              max: parseFloat(style.maxWidth),
+              pinned: pinned[index]
+          });
+      });
+      var cellStyle = getComputedStyle(cell);
+      var minWidth = parseFloat(cellStyle.minWidth) || 0;
+      var maxWidth = parseFloat(cellStyle.maxWidth);
+      var declaredWidths = allColumns.map(column => column.style.width);
+      var columnWidths = allColumns.map(column => column.getBoundingClientRect().width);
+      allColumns.forEach(function (column, index) {
+          if (pinned[index]) {
+              column.style.width = columnWidths[index] + 'px';
+          }
+      });
+      Radzen[resizeKey] = {
           clientX: clientX,
           width: cell.getBoundingClientRect().width,
+          resized: false,
           mouseUpHandler: function (e) {
-              if (Radzen[el]) {
-                  grid.invokeMethodAsync(
-                      'RadzenGrid.OnColumnResized',
-                      columnIndex,
-                      cell.getBoundingClientRect().width
-                  );
-                  el.style.width = null;
-                  document.removeEventListener('mousemove', Radzen[el].mouseMoveHandler);
-                  document.removeEventListener('mouseup', Radzen[el].mouseUpHandler);
-                  document.removeEventListener('touchmove', Radzen[el].touchMoveHandler)
-                  document.removeEventListener('touchend', Radzen[el].mouseUpHandler);
-                  Radzen[el] = null;
+              var resize = Radzen[resizeKey];
+
+              if (!resize) return;
+
+              if (!resize.resized) {
+                  allColumns.forEach(function (column, index) {
+                      column.style.width = declaredWidths[index];
+                  });
               }
+              else {
+                  var widths = columns.map(function (column, index) {
+                      if (!bounds[index].pinned) {
+                          return 0;
+                      }
+
+                      var width = Math.max(parseFloat(column.style.width), bounds[index].min);
+
+                      return Number.isNaN(bounds[index].max) ? width : Math.min(width, bounds[index].max);
+                  });
+
+                  try {
+                      if (columns.length) {
+                          grid.invokeMethodAsync('RadzenGrid.OnColumnsResized', columnIndex, widths[columnIndex], widths);
+                      } else {
+                          grid.invokeMethodAsync('RadzenGrid.OnColumnResized', columnIndex, cell.getBoundingClientRect().width);
+                      }
+                  } catch { }
+              }
+
+              el.style.width = null;
+              document.removeEventListener('mousemove', resize.mouseMoveHandler);
+              document.removeEventListener('mouseup', resize.mouseUpHandler);
+              document.removeEventListener('touchmove', resize.touchMoveHandler)
+              document.removeEventListener('touchend', resize.mouseUpHandler);
+              Radzen[resizeKey] = null;
           },
           mouseMoveHandler: function (e) {
-              if (Radzen[el]) {
-                  var widthFloat = (Radzen[el].width - (Radzen.isRTL(cell) ? -1 : 1) * (Radzen[el].clientX - e.clientX));
-                  var minWidth = parseFloat(cell.style.minWidth || 0)
-                  var maxWidth = parseFloat(cell.style.maxWidth || 0)
+              if (Radzen[resizeKey]) {
+                  var widthFloat = (Radzen[resizeKey].width - (Radzen.isRTL(cell) ? -1 : 1) * (Radzen[resizeKey].clientX - e.clientX));
 
                   if (widthFloat < minWidth) {
                       widthFloat = minWidth;
                   }
 
-                  if (cell.style.maxWidth && widthFloat > maxWidth) {
+                  if (!Number.isNaN(maxWidth) && widthFloat > maxWidth) {
                       widthFloat = maxWidth;
+                  }
+
+                  if (widthFloat !== Radzen[resizeKey].width) {
+                      Radzen[resizeKey].resized = true;
                   }
 
                   var width = widthFloat + 'px';
 
-                  if (cell) {
-                      cell.style.width = width;
-                  }
                   if (col) {
                       col.style.width = width;
+                  } else {
+                      cell.style.width = width;
                   }
-                  if (dataCol) {
-                      dataCol.style.width = width;
-                  }
-                  if (footerCol) {
-                      footerCol.style.width = width;
+
+                  if (hasFrozenColumns) {
+                      Radzen.updateFrozenColumnPositions(gridElement);
                   }
               }
           },
           touchMoveHandler: function (e) {
               if (e.targetTouches[0]) {
-                  Radzen[el].mouseMoveHandler(e.targetTouches[0]);
+                  e.preventDefault();
+                  Radzen[resizeKey].mouseMoveHandler(e.targetTouches[0]);
               }
           }
       };
       el.style.width = "100%";
-      document.addEventListener('mousemove', Radzen[el].mouseMoveHandler);
-      document.addEventListener('mouseup', Radzen[el].mouseUpHandler);
-      document.addEventListener('touchmove', Radzen[el].touchMoveHandler, { passive: true })
-      document.addEventListener('touchend', Radzen[el].mouseUpHandler, { passive: true });
+      document.addEventListener('mousemove', Radzen[resizeKey].mouseMoveHandler);
+      document.addEventListener('mouseup', Radzen[resizeKey].mouseUpHandler);
+      document.addEventListener('touchmove', Radzen[resizeKey].touchMoveHandler, { passive: false })
+      document.addEventListener('touchend', Radzen[resizeKey].mouseUpHandler);
   },
       startSplitterResize: function(id,
         splitter,
@@ -2456,6 +7323,7 @@ window.Radzen = {
         var el = document.getElementById(id);
         var pane = document.getElementById(paneId);
         var paneNext = document.getElementById(paneNextId);
+        var separator = pane ? document.getElementById(pane.id + '-resize') : null;
         var paneLength;
         var paneNextLength;
         var panePerc;
@@ -2513,15 +7381,16 @@ window.Radzen = {
             paneNextLength: isFinite(paneNextLength) ? paneNextLength : 0,
             mouseUpHandler: function(e) {
                 if (Radzen[el]) {
-                    splitter.invokeMethodAsync(
+                    try { splitter.invokeMethodAsync(
                         'RadzenSplitter.OnPaneResized',
                         parseInt(pane.getAttribute('data-index')),
                         parseFloat(pane.style.flexBasis),
                         paneNext ? parseInt(paneNext.getAttribute('data-index')) : null,
                         paneNext ? parseFloat(paneNext.style.flexBasis) : null
-                    );
+                    ); } catch { }
 
                     document.removeEventListener('pointerup', Radzen[el].mouseUpHandler);
+                    document.removeEventListener('pointercancel', Radzen[el].mouseUpHandler);
                     document.removeEventListener('pointermove', Radzen[el].mouseMoveHandler);
                     el.removeEventListener('touchmove', preventDefaultAndStopPropagation);
                     Radzen[el] = null;
@@ -2530,9 +7399,14 @@ window.Radzen = {
             mouseMoveHandler: function(e) {
                 if (Radzen[el]) {
 
-                    splitter.invokeMethodAsync(
+                    if (e.buttons === 0) {
+                        Radzen[el].mouseUpHandler(e);
+                        return;
+                    }
+
+                    try { splitter.invokeMethodAsync(
                         'RadzenSplitter.OnPaneResizing'
-                    );
+                    ); } catch { }
 
                     var spacePerc = Radzen[el].panePerc + Radzen[el].paneNextPerc;
                     var spaceLength = Radzen[el].paneLength + Radzen[el].paneNextLength;
@@ -2549,7 +7423,7 @@ window.Radzen = {
                     if (paneNext) {
                         var nextSpace=spaceLength-length;
                         if (minNextValue && nextSpace < minNextValue) length = spaceLength-minNextValue;
-                        if (maxNextValue && nextSpace > maxNextValue) length = spaceLength+maxNextValue;
+                        if (maxNextValue && nextSpace > maxNextValue) length = spaceLength-maxNextValue;
                     }
 
                     var perc = length / Radzen[el].paneLength;
@@ -2568,6 +7442,16 @@ window.Radzen = {
                     pane.style.flexBasis = newPerc + '%';
                     if (paneNext)
                         paneNext.style.flexBasis = (spacePerc - newPerc) + '%';
+
+                    if (separator) {
+                        var valueMin = parseFloat(separator.getAttribute('aria-valuemin')) || 0;
+                        var valueMax = parseFloat(separator.getAttribute('aria-valuemax'));
+                        if (!isFinite(valueMax)) valueMax = 100;
+                        var valueNow = Math.round(newPerc);
+                        if (valueNow < valueMin) valueNow = valueMin;
+                        if (valueNow > valueMax) valueNow = valueMax;
+                        separator.setAttribute('aria-valuenow', valueNow);
+                    }
                 }
             },
             touchMoveHandler: function(e) {
@@ -2582,6 +7466,7 @@ window.Radzen = {
             ev.stopPropagation();
         };
           document.addEventListener('pointerup', Radzen[el].mouseUpHandler);
+          document.addEventListener('pointercancel', Radzen[el].mouseUpHandler);
           document.addEventListener('pointermove', Radzen[el].mouseMoveHandler);
           el.addEventListener('touchmove', preventDefaultAndStopPropagation, { passive: false });
     },
@@ -2589,7 +7474,9 @@ window.Radzen = {
         var el = document.getElementById(id);
         if (el && Radzen[el]) {
             Radzen[el].mouseMoveHandler(e);
-            Radzen[el].mouseUpHandler(e);
+            if (Radzen[el]) {
+                Radzen[el].mouseUpHandler(e);
+            }
         }
     },
     openWaiting: function() {
@@ -2624,6 +7511,8 @@ window.Radzen = {
         }
     },
     toggleDictation: function (componentRef, language) {
+        var restarts = 0;
+
         function start() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -2644,21 +7533,37 @@ window.Radzen = {
                     return;
                 }
 
+                restarts = 0;
+
                 let current = event.results[event.results.length - 1][0]
                 let result = current.transcript;
 
-                componentRef.invokeMethodAsync("OnResult", result);
+                try { suppressDisposed(componentRef.invokeMethodAsync("OnResult", result)); } catch { }
+            };
+            radzenRecognition.onerror = function (event) {
+                if (event.error == 'not-allowed' || event.error == 'service-not-allowed' || event.error == 'audio-capture' || event.error == 'language-not-supported') {
+                    this.stopRequested = true;
+                }
             };
             radzenRecognition.onend = function (event) {
-                componentRef.invokeMethodAsync("StopRecording");
-                radzenRecognition = null;
+                if (!this.stopRequested && restarts++ < 10) {
+                    start();
+                    return;
+                }
+
+                if (this == radzenRecognition) {
+                    radzenRecognition = null;
+                }
+
+                try { suppressDisposed(componentRef.invokeMethodAsync("StopRecording")); } catch { }
             };
             radzenRecognition.start();
         }
 
         if (radzenRecognition) {
+            radzenRecognition.stopRequested = true;
             if (radzenRecognition.componentRef._id != componentRef._id) {
-                radzenRecognition.addEventListener('end', start);
+                radzenRecognition.addEventListener('end', function () { start(); });
             }
             radzenRecognition.stop();
         } else {
@@ -2666,6 +7571,9 @@ window.Radzen = {
         }
     },
     openChartTooltip: function (chart, x, y, id, instance, callback) {
+        var existing = document.getElementById(id);
+        var wasOpen = existing && existing.style.display != 'none' && existing.offsetParent != null;
+
         Radzen.closeTooltip(id);
 
         var chartRect = chart.getBoundingClientRect();
@@ -2678,6 +7586,15 @@ window.Radzen = {
             return;
         }
         var tooltipContent = popup.children[0];
+
+        var inner = tooltipContent.querySelector('.rz-chart-tooltip-content');
+        if (inner) {
+            inner.classList.remove('rz-chart-tooltip-enter');
+            if (!wasOpen) {
+                void inner.offsetWidth;
+                inner.classList.add('rz-chart-tooltip-enter');
+            }
+        }
         var tooltipContentRect = tooltipContent.getBoundingClientRect();
         var tooltipContentClassName = 'rz-top-chart-tooltip';
         if (y - tooltipContentRect.height < 0) {
@@ -2687,98 +7604,77 @@ window.Radzen = {
         tooltipContent.classList.remove('rz-bottom-chart-tooltip');
         tooltipContent.classList.add(tooltipContentClassName);
     },
-    navigateTo: function (selector, scroll) {
-      if (selector.startsWith('#')) {
-        history.replaceState(null, '', location.pathname + location.search + selector);
-      }
-
-      if (scroll) {
-        const target = document.querySelector(selector);
-          if (target) {
-            this.selectedNavigationSelector = selector;
-            target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'start' });
-        }
-      }
-    },
-    registerScrollListener: function (element, ref, selectors, selector) {
+    createScrollListener: function (ref, selectors, selector) {
         let currentSelector;
         const container = selector ? document.querySelector(selector) : document.documentElement;
         const elements = selectors.map(document.querySelector, document);
 
-        this.unregisterScrollListener(element);
+        let rafId = null;
 
-        // helper to get current scroll position of container
-        const getScrollPosition = () => container && container.tagName === 'HTML' ? (window.scrollY || document.documentElement.scrollTop) : (container ? container.scrollTop : 0);
-        // store last scroll position on the element so we can determine direction
-        let lastScrollPosition = getScrollPosition();
+        const scrollHandler = () => {
+            if (rafId !== null) {
+                return;
+            }
 
-        let timeoutId = null;
-        const debounce = (callback, wait) => {
-            return () => {
-                window.clearTimeout(timeoutId);
-                timeoutId = window.setTimeout(() => {
-                    callback();
-                }, wait);
-            };
-        }
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
 
-        element.scrollHandler = () => {
-            const containerRect = container && container.tagName === 'HTML'
-                ? { top: 0, bottom: window.innerHeight, height: window.innerHeight, clientHeight: window.innerHeight }
-                : container.getBoundingClientRect();
+                const isHtml = !selector || container.tagName === 'HTML';
+                const threshold = isHtml ? 10 : container.getBoundingClientRect().top + 10;
+                const atBottom = isHtml
+                    ? window.scrollY > 0 && (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 2
+                    : container.scrollTop > 0 && (container.scrollTop + container.clientHeight) >= container.scrollHeight - 2;
 
-            const scrollTop = getScrollPosition();
-            //When loading the page or when no scrolling has been execute -> always look at the top of the container
-            const isDown = lastScrollPosition != 0 && scrollTop > lastScrollPosition;
-            // determine threshold based on scroll direction with a small offset
-            const threshold = isDown ? containerRect.bottom - 5 : containerRect.top + 5;
-            lastScrollPosition = scrollTop;
-            let min = Number.MAX_SAFE_INTEGER;
-            let match;
-            for (let i = 0; i < elements.length; i++) {
-                const elm = elements[i];
-                if (!elm) continue;
+                let match;
 
-                const rect = elm.getBoundingClientRect();
-                const diff = Math.abs(rect.top - threshold);
+                if (atBottom) {
+                    for (let i = selectors.length - 1; i >= 0; i--) {
+                        if (elements[i]) {
+                            match = selectors[i];
+                            break;
+                        }
+                    }
+                } else {
+                    for (let i = elements.length - 1; i >= 0; i--) {
+                        const element = elements[i];
 
-                if (!match && rect.top < threshold) {
-                    match = selectors[i];
-                    min = diff;
-                    continue;
+                        if (!element) {
+                            continue;
+                        }
+
+                        if (element.getBoundingClientRect().top <= threshold) {
+                            match = selectors[i];
+                            break;
+                        }
+                    }
                 }
 
-                if (match && rect.top > threshold) continue;
-
-                if (diff < min) {
-                    match = selectors[i];
-                    min = diff;
-                }                
-            }
-
-            if (match && match !== currentSelector) {
-                currentSelector = match;
-                if (!this.selectedNavigationSelector || (match === this.selectedNavigationSelector)) {
-                    this.navigateTo(currentSelector, false);
-                    ref.invokeMethodAsync('ScrollIntoView', currentSelector);
+                if (match !== currentSelector) {
+                    currentSelector = match;
+                    try {
+                        ref.invokeMethodAsync('ScrollIntoView', currentSelector);
+                    } catch {
+                    }
                 }
-            }
-            // clear selected navigation selector after scroll completes
-            if (this.selectedNavigationSelector && match === this.selectedNavigationSelector) {
-                debounce(() => { this.selectedNavigationSelector = undefined; }, 100)();
-            }
+            });
         };
 
-        document.addEventListener('scroll', element.scrollHandler, true);
-        window.addEventListener('resize', element.scrollHandler, true);
-    },
-    unregisterScrollListener: function (element) {
-      document.removeEventListener('scroll', element.scrollHandler, true);
-      window.removeEventListener('resize', element.scrollHandler, true);
+        const scrollTarget = selector ? container : window;
+        scrollTarget.addEventListener('scroll', scrollHandler, { passive: true });
+        window.addEventListener('resize', scrollHandler, { passive: true });
+
+        scrollHandler();
+
+        return {
+            dispose() {
+                scrollTarget.removeEventListener('scroll', scrollHandler);
+                window.removeEventListener('resize', scrollHandler);
+            }
+        };
     },
     setTheme: function (href, wcagHref) {
       const theme = document.getElementById('radzen-theme-link');
-      if (theme && theme.href != href) {
+      if (theme && theme.sheet && theme.sheet.href === theme.href && theme.href != href) {
         theme.href = href;
       }
 
@@ -2802,13 +7698,111 @@ window.Radzen = {
     createDraggable: function(element, ref, onDragStart) {
       function handleDragStart(e) {
         e.dataTransfer.setData('', e.target.id);
-        ref.invokeMethodAsync(onDragStart);
+        try { suppressDisposed(ref.invokeMethodAsync(onDragStart)); } catch { }
       }
       element.draggable = true;
       element.addEventListener('dragstart', handleDragStart);
       return {
         dispose() {
           element.removeEventListener('dragstart', handleDragStart);
+        }
+      };
+    },
+    createSchedulerResizable: function (element, ref, onResize, minutesPerSlot) {
+      var drag = null;
+      var justResized = false;
+
+      function applyPreview(slots) {
+        if (drag.mode === 'start') {
+          element.style.insetBlockStart = (drag.top + slots * drag.pxPerSlot) + 'px';
+          element.style.height = (drag.height - slots * drag.pxPerSlot) + 'px';
+        } else {
+          element.style.height = (drag.height + slots * drag.pxPerSlot) + 'px';
+        }
+      }
+
+      function onMouseDown(e) {
+        var handle = e.target.closest('.rz-event-resize');
+        if (!handle || e.button !== 0) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var fontSize = parseFloat(getComputedStyle(element).fontSize) || 16;
+        var pxPerSlot = 1.5 * fontSize;
+        var slotsElement = element.closest('.rz-slots');
+
+        drag = {
+          mode: handle.classList.contains('rz-event-resize-start') ? 'start' : 'end',
+          startClientY: e.clientY,
+          top: element.offsetTop,
+          height: element.offsetHeight,
+          maxHeight: slotsElement ? slotsElement.getBoundingClientRect().height : Infinity,
+          pxPerSlot: pxPerSlot,
+          slots: 0,
+          wasDraggable: element.draggable
+        };
+
+        element.draggable = false;
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      }
+
+      function onMouseMove(e) {
+        if (!drag) return;
+
+        var slots = Math.round((e.clientY - drag.startClientY) / drag.pxPerSlot);
+        var heightSlots = Math.round(drag.height / drag.pxPerSlot);
+
+        if (drag.mode === 'start') {
+          slots = Math.min(slots, heightSlots - 1);
+          slots = Math.max(slots, Math.round(-drag.top / drag.pxPerSlot));
+        } else {
+          slots = Math.max(slots, 1 - heightSlots);
+          slots = Math.min(slots, Math.floor((drag.maxHeight - drag.top - drag.height) / drag.pxPerSlot));
+        }
+
+        drag.slots = slots;
+        applyPreview(slots);
+        document.body.style.cursor = 'ns-resize';
+      }
+
+      function onMouseUp() {
+        if (!drag) return;
+
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        element.draggable = drag.wasDraggable;
+        justResized = true;
+        setTimeout(function () { justResized = false; }, 0);
+
+        if (drag.slots !== 0) {
+          var minutes = drag.slots * minutesPerSlot;
+          try { suppressDisposed(ref.invokeMethodAsync(onResize, drag.mode === 'start' ? minutes : 0, drag.mode === 'end' ? minutes : 0)); } catch { }
+        }
+
+        drag = null;
+      }
+
+      function onClickCapture(e) {
+        if (justResized) {
+          e.stopPropagation();
+          e.preventDefault();
+          justResized = false;
+        }
+      }
+
+      element.addEventListener('mousedown', onMouseDown);
+      element.addEventListener('click', onClickCapture, true);
+
+      return {
+        dispose() {
+          element.removeEventListener('mousedown', onMouseDown);
+          element.removeEventListener('click', onClickCapture, true);
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          document.body.style.cursor = '';
         }
       };
     }
@@ -2822,7 +7816,7 @@ Radzen.registerFabMenu = function(element, dotnet){
   }
   const handler = function(e){
     if(!element.contains(e.target)){
-      dotnet.invokeMethodAsync('CloseAsync');
+      try { suppressDisposed(dotnet.invokeMethodAsync('CloseAsync')); } catch { }
     }
   };
   element.__rzOutsideClickHandler = handler;
@@ -2835,4 +7829,2187 @@ Radzen.unregisterFabMenu = function(element){
     document.removeEventListener('click', handler);
     delete element.__rzOutsideClickHandler;
   }
+};
+Radzen.chatIsNearBottom = function(container, threshold) {
+  if (!container) return true;
+  return container.scrollHeight - container.scrollTop - container.clientHeight <= (threshold || 50);
+};
+Radzen.chatScrollToBottom = function(container) {
+  if (!container) return;
+  container.scrollTop = container.scrollHeight;
+};
+Radzen.noop = function() {};
+Radzen.getCookies = function() {
+  return document.cookie;
+};
+Radzen.setCookie = function(cookie) {
+  document.cookie = cookie;
+};
+Radzen.scrollToTop = function(elementId) {
+  try { var el = document.getElementById(elementId); if (el) el.scrollTop = 0; } catch(e) {}
+};
+Radzen.scrollIntoView = function(selector) {
+  var el = document.querySelector(selector);
+  if (el) el.scrollIntoView();
+};
+Radzen.delayedFocus = function(elementId, delay) {
+  setTimeout(function() { var el = document.getElementById(elementId); if (el) el.focus(); }, delay || 200);
+};
+Radzen.invokeRadzenCallback = function(key) {
+  var fn = Radzen[key];
+  if (typeof fn === 'function') fn();
+};
+Radzen.copyToClipboard = async function(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+Radzen.getSelectedText = function(element) {
+  var field = element && (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') ? element : element ? element.querySelector('textarea, input[type=text]') : null;
+  if (field && field.selectionStart != null && field.selectionEnd > field.selectionStart && (field === element || field.offsetParent !== null)) {
+    return field.value.substring(field.selectionStart, field.selectionEnd);
+  }
+  var selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return '';
+  if (element && !element.contains(selection.anchorNode)) return '';
+  return selection.toString();
+};
+Radzen.getSelectionRange = function(id) {
+  var element = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!element || element.selectionStart == null || element.selectionEnd == null) return null;
+  return [element.selectionStart, element.selectionEnd];
+};
+Radzen.clickElement = function(id) {
+  var element = typeof id === 'string' ? document.getElementById(id) : id;
+  if (element) element.click();
+};
+Radzen.readClipboardText = async function() {
+  try {
+    return await navigator.clipboard.readText();
+  } catch {
+    return null;
+  }
+};
+Radzen.chatScrollAfterRender = function(selector, delay) {
+  setTimeout(function() {
+    var container = document.querySelector(selector);
+    if (container) container.scrollTop = container.scrollHeight;
+  }, delay || 100);
+};
+Radzen.createAutoComplete = function(el, popupId, openOnFocus, minLength, instance, openCallback, closeCallback) {
+  if (!el) return { dispose: function() {} };
+  var input = el.querySelector('input.rz-autocomplete-input, textarea.rz-autocomplete-input');
+  var list = el.querySelector('.rz-autocomplete-list');
+  if (!input) return { dispose: function() {} };
+  function open() {
+    var popup = document.getElementById(popupId);
+    var wasOpen = popup && popup.style.display == 'block';
+    Radzen.openPopup(input.parentNode, popupId, true, null, null, null, instance, closeCallback);
+    if (!wasOpen && instance && openCallback) {
+      try { suppressDisposed(instance.invokeMethodAsync(openCallback)); } catch { }
+    }
+  }
+  function onInput() {
+    if (!openOnFocus && input.value.length < (minLength || 0)) {
+      Radzen.closePopup(popupId, instance, closeCallback);
+      return;
+    }
+    open();
+  }
+  function onFocus() { open(); }
+  function clearActive() { Radzen.activeElement = null; }
+  input.addEventListener('input', onInput);
+  input.addEventListener('blur', clearActive);
+  if (openOnFocus) input.addEventListener('focus', onFocus);
+  if (list) list.addEventListener('mousedown', clearActive);
+  return { dispose: function() {
+    input.removeEventListener('input', onInput);
+    input.removeEventListener('blur', clearActive);
+    if (openOnFocus) input.removeEventListener('focus', onFocus);
+    if (list) list.removeEventListener('mousedown', clearActive);
+  }};
+};
+Radzen.createDataGrid = function(el) {
+  if (!el) return { dispose: function() {} };
+  function onClick(e) {
+    if (e.__rzDataGridHandled) return;
+    e.__rzDataGridHandled = true;
+    var label = e.target.closest('.rz-cell-filter-label');
+    if (label) { e.preventDefault(); }
+    var btn = e.target.closest('button[aria-haspopup][aria-controls]');
+    if (btn && !btn.closest('.rz-datepicker') && el.contains(btn) && label && label.contains(btn) && btn.getAttribute('aria-controls')) {
+      Radzen.togglePopup(btn.parentNode, btn.getAttribute('aria-controls'));
+    }
+  }
+  function onMousedown(e) {
+    if (e.__rzDataGridHandled) return;
+    e.__rzDataGridHandled = true;
+    var btn = e.target.closest('.rz-apply-filter');
+    if (btn) { Radzen.blur(btn, e); }
+  }
+  el.addEventListener('click', onClick);
+  el.addEventListener('mousedown', onMousedown);
+  return { dispose: function() {
+    el.removeEventListener('click', onClick);
+    el.removeEventListener('mousedown', onMousedown);
+  }};
+};
+Radzen.createDropDown = function(el) {
+  if (!el) return { dispose: function() {} };
+  function onMousedown() { Radzen.activeElement = null; }
+  function onFilterClick(e) {
+    var input = e.target.closest('.rz-multiselect-filter-container input');
+    if (input) { e.preventDefault(); e.stopPropagation(); }
+  }
+  el.addEventListener('mousedown', onMousedown);
+  el.addEventListener('click', onFilterClick, true);
+  return { dispose: function() {
+    el.removeEventListener('mousedown', onMousedown);
+    el.removeEventListener('click', onFilterClick, true);
+  }};
+};
+Radzen.registerProfileMenuClickAway = function (el, ref) {
+  if (!el) return;
+  Radzen.unregisterProfileMenuClickAway(el);
+  el.profileMenuClickAway = function (e) {
+    if (!document.contains(el)) {
+      Radzen.unregisterProfileMenuClickAway(el);
+      return;
+    }
+    if (el.contains(e.target)) {
+      var item = e.target.closest('.rz-navigation-item');
+      if (item && item.querySelector('.rz-navigation-menu')) {
+        return;
+      }
+    }
+    try { suppressDisposed(ref.invokeMethodAsync('CloseOnClickAway')); } catch { }
+  };
+  document.addEventListener('click', el.profileMenuClickAway);
+};
+Radzen.unregisterProfileMenuClickAway = function (el) {
+  if (el && el.profileMenuClickAway) {
+    document.removeEventListener('click', el.profileMenuClickAway);
+    delete el.profileMenuClickAway;
+  }
+};
+Radzen.createFileInput = function(el) {
+  if (!el) return { dispose: function() {} };
+  var choose = el.querySelector('.rz-fileupload-choose');
+  var fileInput = el.querySelector('input[type=file]');
+  function onKeydown(e) {
+    if (e.keyCode === 32 || e.keyCode === 13) {
+      e.preventDefault();
+      var child = choose.firstElementChild;
+      if (child) child.click();
+    }
+  }
+  function onStopKeydown(e) { e.stopPropagation(); }
+  function onChange(e) { Radzen.uploadInputChange(e, null, false, false, true); }
+  if (choose) choose.addEventListener('keydown', onKeydown);
+  if (fileInput) {
+    fileInput.addEventListener('keydown', onStopKeydown);
+    fileInput.addEventListener('change', onChange);
+  }
+  return { dispose: function() {
+    if (choose) choose.removeEventListener('keydown', onKeydown);
+    if (fileInput) {
+      fileInput.removeEventListener('keydown', onStopKeydown);
+      fileInput.removeEventListener('change', onChange);
+    }
+  }};
+};
+Radzen.createMask = function(el, id, mask, pattern, charPattern) {
+  if (!el) return { dispose: function() {} };
+  function onInput() { Radzen.mask(id, mask, pattern, charPattern); }
+  el.addEventListener('input', onInput);
+  return { dispose: function() { el.removeEventListener('input', onInput); }};
+};
+Radzen.createNumeric = function(el, isInteger, separator, min, max, isNullable) {
+  if (!el) return { dispose: function() {} };
+  var input = el.querySelector('.rz-numeric-input');
+  if (!input) return { dispose: function() {} };
+  function onKeypress(e) { Radzen.numericKeyPress(e, isInteger, separator); }
+  function onBlur(e) { Radzen.numericOnInput(e, min, max, isNullable); }
+  function onPaste(e) { Radzen.numericOnPaste(e, min, max); }
+  input.addEventListener('keypress', onKeypress);
+  if (min !== null || max !== null) {
+    input.addEventListener('blur', onBlur);
+    input.addEventListener('paste', onPaste);
+  }
+  return { dispose: function() {
+    input.removeEventListener('keypress', onKeypress);
+    input.removeEventListener('blur', onBlur);
+    input.removeEventListener('paste', onPaste);
+  }};
+};
+Radzen.menuItemActivate = function (e) {
+  var item = e.target;
+  if (!item || item.nodeType !== 1 || item.tagName !== 'LI' || item.getAttribute('role') !== 'menuitem') return;
+  if (item.getAttribute('aria-disabled') === 'true') return;
+  var link = item.querySelector(':scope > .rz-navigation-item-wrapper > .rz-navigation-item-link');
+  if (!link) return;
+  e.stopPropagation();
+  link.dispatchEvent(new MouseEvent('click', e));
+};
+document.addEventListener('click', Radzen.menuItemActivate, true);
+Radzen.menuClick = function (e) {
+  var item = e.target.closest('.rz-navigation-item-wrapper');
+  if (!item) return;
+  var menu = item.closest('[data-click-to-open]');
+  if (!menu) return;
+  var clickToOpen = menu.getAttribute('data-click-to-open') === 'true';
+  var navItem = item.closest('.rz-navigation-item');
+  var hasChildren = navItem && navItem.querySelector('.rz-navigation-menu');
+  if (clickToOpen || hasChildren) {
+    Radzen.toggleMenuItem(item);
+  } else {
+    Radzen.toggleMenuItem(item, e, false);
+  }
+};
+document.addEventListener('click', Radzen.menuClick);
+Radzen.createMenu = function(el, clickToOpen) {
+  if (!el) return { dispose: function() {} };
+  var hoverItems = [];
+  if (!clickToOpen) {
+    el.querySelectorAll('.rz-navigation-item').forEach(function(navItem) {
+      if (!navItem.querySelector('.rz-navigation-menu')) return;
+      var li = navItem.closest('li') || navItem;
+      function onEnter(e) { Radzen.toggleMenuItem(li, e, true, false); }
+      function onLeave(e) { Radzen.toggleMenuItem(li, e, false, false); }
+      li.addEventListener('mouseenter', onEnter);
+      li.addEventListener('mouseleave', onLeave);
+      hoverItems.push({ el: li, onEnter: onEnter, onLeave: onLeave });
+    });
+  }
+  return { dispose: function() {
+    hoverItems.forEach(function(h) {
+      h.el.removeEventListener('mouseenter', h.onEnter);
+      h.el.removeEventListener('mouseleave', h.onLeave);
+    });
+  }};
+};
+Radzen.createUpload = function(el, url, auto, multiple, parameterName, method, stream) {
+  if (!el) return { dispose: function() {} };
+  var choose = el.querySelector('.rz-fileupload-choose');
+  var fileInput = el.querySelector('input[type=file]');
+  function onKeydown(e) {
+    if (e.keyCode === 32 || e.keyCode === 13) {
+      e.preventDefault();
+      var child = choose.firstElementChild;
+      if (child) child.click();
+    }
+  }
+  function onStopKeydown(e) { e.stopPropagation(); }
+  function onChange(e) {
+    Radzen.uploadInputChange(e, url, auto, multiple, true, parameterName, method, stream);
+  }
+  function onImgError() { this.style.display = 'none'; }
+  if (choose) choose.addEventListener('keydown', onKeydown);
+  if (fileInput) {
+    fileInput.addEventListener('keydown', onStopKeydown);
+    if (url) fileInput.addEventListener('change', onChange);
+  }
+  el.querySelectorAll('.rz-fileupload-row img').forEach(function(img) {
+    img.addEventListener('error', onImgError);
+  });
+  return { dispose: function() {
+    if (choose) choose.removeEventListener('keydown', onKeydown);
+    if (fileInput) {
+      fileInput.removeEventListener('keydown', onStopKeydown);
+      if (url) fileInput.removeEventListener('change', onChange);
+    }
+    el.querySelectorAll('.rz-fileupload-row img').forEach(function(img) {
+      img.removeEventListener('error', onImgError);
+    });
+  }};
+};
+class Spreadsheet {
+  constructor(element, dotNetRef, shortcuts) {
+    this.element = element;
+    this.dotNetRef = dotNetRef;
+    this.shortcuts = shortcuts || {}; // map of key -> isGlobal (true = global, false = grid-only)
+    this.rtl = Radzen.isRTL(element);
+    this.pendingKeys = null;
+    this.element.addEventListener('keydown', this.onKeyDown);
+    this.element.addEventListener('focusin', this.onFocusIn);
+    this.element.addEventListener('pointerdown', this.onPointerDown);
+    this.element.addEventListener('dblclick', this.onDoubleClick);
+    this.element.addEventListener('contextmenu', this.onContextMenu);
+    addEventListener('paste', this.onPaste);
+    addEventListener('copy', this.onCopy);
+  }
+
+  onPaste = (e) => {
+    if (this.isActive(e.target)) {
+      var text = e.clipboardData.getData('text/plain');
+      this.dotNetRef.invokeMethodAsync('OnPasteAsync', text);
+    }
+  }
+
+  onCopy = async (e) => {
+    if (this.isActive(e.target)) {
+      this.dotNetRef.invokeMethodAsync('OnCopyAsync');
+    }
+  }
+
+  isActive = (target) => {
+    return target == this.element || this.element.contains(target);
+  }
+
+  isCellEditorTextEntry = (target) => {
+    if (!target.isContentEditable && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+      return false;
+    }
+
+    const cellEditor = target.closest('.rz-spreadsheet-cell-editor');
+    return cellEditor != null && this.element.contains(cellEditor);
+  }
+
+  copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard API failed (e.g. user activation expired)
+    }
+  }
+
+  readClipboardText = async () => {
+    try {
+      return await navigator.clipboard.readText();
+    } catch {
+      return null;
+    }
+  }
+
+  onPointerDown = async (e) => {
+    if (e.button != 0) return;
+
+    this.pendingKeys = null;
+
+    this.rtl = Radzen.isRTL(this.element);
+
+    if (e.target.matches('.rz-spreadsheet-autofill-handle')) {
+      addEventListener('pointermove', this.onAutofillPointerMove);
+      addEventListener('pointerup', this.onAutofillPointerUp);
+      this.dotNetRef.invokeMethodAsync('OnAutofillPointerDownAsync', this.toEventArgs(e));
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    if (e.target.matches('.rz-spreadsheet-cell')) {
+      const cell = e.target;
+      const row = +cell.dataset.row;
+      const column = +cell.dataset.column;
+      addEventListener('pointerup', this.onCellPointerUp);
+      addEventListener('pointermove', this.onCellPointerMove);
+      if (!(await this.dotNetRef.invokeMethodAsync('OnCellPointerDownAsync', { row, column, pointer: this.toEventArgs(e) }))) {
+        removeEventListener('pointermove', this.onCellPointerMove);
+      }
+    } else if (e.target.matches('.rz-spreadsheet-row-header')) {
+      const row = +e.target.dataset.row;
+      addEventListener('pointerup', this.onRowPointerUp);
+      addEventListener('pointermove', this.onRowPointerMove);
+      if (!(await this.dotNetRef.invokeMethodAsync('OnRowPointerDownAsync', { row, pointer: this.toEventArgs(e) }))) {
+        removeEventListener('pointermove', this.onRowPointerMove);
+      }
+    } else if (e.target.matches('.rz-spreadsheet-column-header')) {
+      const column = +e.target.dataset.column;
+      addEventListener('pointerup', this.onColumnPointerUp);
+      addEventListener('pointermove', this.onColumnPointerMove);
+      if (!(await this.dotNetRef.invokeMethodAsync('OnColumnPointerDownAsync', { column, pointer: this.toEventArgs(e) }))) {
+        removeEventListener('pointermove', this.onColumnPointerMove);
+      }
+    } else if (e.target.matches('.rz-spreadsheet-resize-handle')) {
+      const direction = e.target.dataset.direction;
+      addEventListener('pointermove', this.onDrawingResizeMove);
+      addEventListener('pointerup', this.onDrawingResizeUp);
+      if (!(await this.dotNetRef.invokeMethodAsync('OnDrawingResizePointerDownAsync', { direction, pointer: this.toEventArgs(e) }))) {
+        removeEventListener('pointermove', this.onDrawingResizeMove);
+        removeEventListener('pointerup', this.onDrawingResizeUp);
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    } else if (e.target.closest('.rz-spreadsheet-image') || e.target.closest('.rz-spreadsheet-chart')) {
+      addEventListener('pointermove', this.onDrawingMoveMove);
+      addEventListener('pointerup', this.onDrawingMoveUp);
+      this.dotNetRef.invokeMethodAsync('OnDrawingMovePointerDownAsync', this.toEventArgs(e));
+      e.preventDefault();
+    } else if (e.target.matches('.rz-spreadsheet-column-resize-handle')) {
+      const column = +e.target.dataset.column;
+        addEventListener('pointermove', this.onColumnResizeMove);
+        addEventListener('pointerup', this.onColumnResizeUp);
+      if (!(await this.dotNetRef.invokeMethodAsync('OnColumnResizePointerDownAsync', { column, pointer: this.toEventArgs(e) }))) {
+        removeEventListener('pointermove', this.onColumnResizeMove);
+        removeEventListener('pointerup', this.onColumnResizeUp);
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    } else if (e.target.matches('.rz-spreadsheet-row-resize-handle')) {
+      const row = +e.target.dataset.row;
+      addEventListener('pointermove', this.onRowResizeMove);
+      addEventListener('pointerup', this.onRowResizeUp);
+      if (!(await this.dotNetRef.invokeMethodAsync('OnRowResizePointerDownAsync', { row, pointer: this.toEventArgs(e) }))) {
+        removeEventListener('pointermove', this.onRowResizeMove);
+        removeEventListener('pointerup', this.onRowResizeUp);
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
+  onContextMenu = (e) => {
+    if (e.target.matches('.rz-spreadsheet-cell')) {
+      e.preventDefault();
+      const row = +e.target.dataset.row;
+      const column = +e.target.dataset.column;
+      this.dotNetRef.invokeMethodAsync('OnCellContextMenuAsync', { row, column, pointer: this.toEventArgs(e) });
+    } else if (e.target.matches('.rz-spreadsheet-row-header')) {
+      e.preventDefault();
+      const row = +e.target.dataset.row;
+      this.dotNetRef.invokeMethodAsync('OnRowContextMenuAsync', { row, pointer: this.toEventArgs(e) });
+    } else if (e.target.matches('.rz-spreadsheet-column-header')) {
+      e.preventDefault();
+      const column = +e.target.dataset.column;
+      this.dotNetRef.invokeMethodAsync('OnColumnContextMenuAsync', { column, pointer: this.toEventArgs(e) });
+    } else if (e.target === this.element) {
+      // Keyboard-triggered (Shift+F10 / Menu key) lands on the grid root, not a cell. Suppress the
+      // browser's native menu; the C# Shift+F10 shortcut opens our menu at the active cell.
+      e.preventDefault();
+    }
+  }
+
+  onDoubleClick = (e) => {
+    if (e.target.matches('.rz-spreadsheet-cell')) {
+      const cell = e.target;
+      const row = +cell.dataset.row;
+      const column = +cell.dataset.column;
+      this.dotNetRef.invokeMethodAsync('OnCellDoubleClickAsync', { row, column, pointer: this.toEventArgs(e) });
+    } else if (e.target.matches('.rz-spreadsheet-column-resize-handle')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const column = +e.target.dataset.column;
+      this.dotNetRef.invokeMethodAsync('OnColumnResizeDoubleClickAsync', { row: 0, column, pointer: this.toEventArgs(e) });
+    }
+  }
+
+  measureTexts = (items) => {
+    const probe = document.createElement('div');
+    probe.className = 'rz-spreadsheet-cell';
+    probe.style.visibility = 'hidden';
+    this.element.appendChild(probe);
+    const style = getComputedStyle(probe);
+    const baseFont = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
+      + (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0);
+    const baseFontSize = style.fontSize;
+    const baseFontFamily = style.fontFamily;
+    this.element.removeChild(probe);
+
+    this.measureCanvas ??= document.createElement('canvas');
+    const context = this.measureCanvas.getContext('2d');
+    context.direction = this.rtl ? 'rtl' : 'ltr';
+
+    return items.map(item => {
+      // Invalid font shorthand assignments are silently ignored; reset so they fall back to the base font.
+      context.font = baseFont;
+      if (item.bold || item.italic || item.fontSize != null || item.fontFamily) {
+        const size = item.fontSize != null ? item.fontSize + 'pt' : baseFontSize;
+        const family = item.fontFamily ? `"${item.fontFamily.replaceAll('"', '\\"')}", ${baseFontFamily}` : baseFontFamily;
+        context.font = `${item.italic ? 'italic ' : ''}${item.bold ? 'bold ' : ''}${size} ${family}`;
+      }
+      const width = context.measureText(item.text).width;
+      // 3% over-fit absorbs metric differences between canvas and other renderers (e.g. Excel after export).
+      return Number.isFinite(width) ? Math.ceil(width * 1.03 + padding) : 0;
+    });
+  }
+
+  onColumnPointerUp = (e) => {
+    removeEventListener('pointermove', this.onColumnPointerMove);
+    removeEventListener('pointerup', this.onColumnPointerUp);
+    this.dotNetRef.invokeMethodAsync('OnSelectionPointerUpAsync');
+  }
+
+  onColumnPointerMove = (e) => {
+    this.invokeAsync('OnColumnPointerMoveAsync', e);
+  }
+
+  onRowPointerMove = (e) => {
+    this.invokeAsync('OnRowPointerMoveAsync', e);
+  }
+
+  onRowPointerUp = (e) => {
+    removeEventListener('pointermove', this.onRowPointerMove);
+    removeEventListener('pointerup', this.onRowPointerUp);
+    this.dotNetRef.invokeMethodAsync('OnSelectionPointerUpAsync');
+  }
+
+  onCellPointerMove = (e) => {
+    this.invokeAsync('OnCellPointerMoveAsync', e);
+  }
+
+  onCellPointerUp = (e) => {
+    removeEventListener('pointermove', this.onCellPointerMove);
+    removeEventListener('pointerup', this.onCellPointerUp);
+    this.dotNetRef.invokeMethodAsync('OnSelectionPointerUpAsync');
+  }
+
+  onKeyDown = (e) => {
+    if (this.isCellEditorTextEntry(e.target) &&
+        (e.isComposing || (e.key !== 'Enter' && e.key !== 'Escape' && e.key !== 'Tab' && e.key !== 'F6'))) {
+      return;
+    }
+
+    let key = '';
+
+    if (e.ctrlKey || e.metaKey) {
+      key += 'Ctrl+';
+    }
+
+    if (e.altKey) {
+      key += 'Alt+';
+    }
+
+    if (e.shiftKey) {
+      key += 'Shift+';
+    }
+
+    key += e.code.replace('Key', '').replace('Digit', '').replace('Numpad', '');
+
+    // Grid context = focus on THIS spreadsheet's root or inside one of ITS cell/formula editors.
+    // Scope the editor check to this.element so a sibling spreadsheet on the same page can never
+    // match. Outside the grid (a toolbar button, sheet tab, ...) only global shortcuts act, so Tab
+    // etc. stay native and the chrome is keyboard-navigable.
+    let isGridContext = e.target === this.element;
+    if (!isGridContext && e.target.closest) {
+      const editorInput = e.target.closest('.rz-spreadsheet-editor-input');
+      isGridContext = editorInput != null && this.element.contains(editorInput);
+    }
+
+    const global = this.shortcuts[key]; // true = global, false = grid-only, undefined = not a shortcut
+    if (global === true || (global === false && isGridContext)) {
+      e.preventDefault();
+    }
+
+    const printable = global === undefined && !e.ctrlKey && !e.metaKey && !e.altKey &&
+      e.key.length === 1 && e.target === this.element;
+
+    // Prevent default for printable characters when not already editing.
+    // Without this, the character gets inserted twice: once by StartEdit and
+    // once by the browser's default insertText when the editor receives focus.
+    if (printable) {
+      e.preventDefault();
+    }
+
+    if (printable) {
+      if (this.pendingKeys != null) {
+        this.pendingKeys += e.key;
+        return;
+      }
+
+      this.pendingKeys = '';
+    } else if (!e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      this.pendingKeys = null;
+    }
+
+    this.dotNetRef.invokeMethodAsync('OnKeyDownAsync', this.toEventArgs(e), isGridContext);
+  }
+
+  onFocusIn = (e) => {
+    const keys = this.pendingKeys;
+
+    this.pendingKeys = null;
+
+    const target = e.target;
+
+    if (!keys || !(target.matches('.rz-spreadsheet-editor-input') || this.isCellEditorTextEntry(target))) {
+      return;
+    }
+
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      try {
+        target.setRangeText(keys, target.value.length, target.value.length, 'end');
+      } catch {
+        target.value += keys;
+      }
+    } else {
+      target.innerText += keys;
+
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      range.collapse(false);
+
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // F6 / Shift+F6 cycle focus between the spreadsheet regions in their visible top-to-bottom order:
+  // ribbon tabs -> active toolbar -> formula bar -> grid -> sheet tabs. This is the advertised escape
+  // from the grid (WCAG 2.1.2).
+  focusAdjacent = (forward) => {
+    // this.element IS this spreadsheet's root (.rz-spreadsheet, role=application). querySelector
+    // only matches descendants of root, so regions from another spreadsheet on the page are never
+    // matched.
+    const root = this.element;
+    const regions = [
+      root.querySelector('[role="tablist"], .rz-tabs-nav'),
+      root.querySelector('.rz-toolbar'),
+      root.querySelector('.rz-spreadsheet-formula-editor .rz-spreadsheet-editor-input'),
+      root,
+      root.querySelector('.rz-spreadsheet-sheet-tabs')
+    ].filter(r => r);
+
+    if (regions.length === 0) {
+      return;
+    }
+
+    // Regions nest (the ribbon tabview contains the toolbar; the root contains everything), so pick
+    // the INNERMOST region that contains the focused element - otherwise an outer region captures
+    // focus that belongs to a nested one and F6 gets stuck cycling between two regions.
+    const active = document.activeElement;
+    let index = -1;
+    let best = null;
+    regions.forEach((r, i) => {
+      if ((r === active || r.contains(active)) && (best === null || best.contains(r))) {
+        best = r;
+        index = i;
+      }
+    });
+    if (index === -1) {
+      index = regions.indexOf(root);
+    }
+
+    const next = (index + (forward ? 1 : -1) + regions.length) % regions.length;
+    this.focusRegion(regions[next]);
+  }
+
+  focusRegion = (region) => {
+    // Focus the region itself when it is the tab stop: the grid root and the ribbon tablist both have
+    // tabindex=0 (the tablist owns arrow-key tab switching via aria-activedescendant, so focusing an
+    // individual tab would break the arrows), and the formula bar is a tabindex=-1 contenteditable.
+    // Otherwise focus the region's first focusable child (e.g. the first toolbar button).
+    if (region.tabIndex >= 0 || region.matches('.rz-spreadsheet-editor-input')) {
+      region.focus();
+      return;
+    }
+
+    // Skip hidden focusables: inline-rendered but closed popups (color pickers, numeric steppers)
+    // match the selector yet calling focus() on a hidden element silently fails, which would strand
+    // the user on the previous region. Pick the first one that is actually rendered.
+    const focusables = region.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]');
+    const target = [...focusables].find(el => el.offsetParent !== null || el.getClientRects().length > 0);
+    (target || region).focus();
+  }
+
+  // Opens the cell context menu at the active cell (Shift+F10 / ContextMenu key). The cell element is
+  // scoped to this spreadsheet; a synthetic pointer carries its on-screen position.
+  openCellContextMenu = (row, column) => {
+    const cell = this.element.querySelector('.rz-spreadsheet-cell[data-row="' + row + '"][data-column="' + column + '"]');
+    const rect = (cell || this.element).getBoundingClientRect();
+    const pointer = {
+      clientX: Math.round(rect.left + 8),
+      clientY: Math.round(cell ? rect.bottom : rect.top + 8),
+      button: 0, buttons: 0, pointerType: 'mouse', isPrimary: true
+    };
+    this.dotNetRef.invokeMethodAsync('OnCellContextMenuAsync', { row, column, pointer });
+  }
+
+  invokeAsync(name, e) {
+    this.dotNetRef.invokeMethodAsync(name, this.toEventArgs(e));
+  }
+
+  toEventArgs(e) {
+    return {
+      key: e.key,
+      code: this.rtl && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')
+        ? (e.code === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft')
+        : e.code,
+      location: e.location,
+      repeat: e.repeat,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey,
+      metaKey: e.metaKey,
+      type: e.type,
+      button: e.button,
+      buttons: e.buttons,
+      clientX: this.rtl ? -e.clientX : e.clientX,
+      clientY: e.clientY,
+      offsetX: this.rtl ? (e.target?.offsetWidth ?? 0) - e.offsetX : e.offsetX,
+      offsetY: e.offsetY,
+      pageX: e.pageX,
+      pageY: e.pageY,
+      screenX: e.screenX,
+      screenY: e.screenY
+    };
+  }
+
+  dispose() {
+    this.element.removeEventListener('keydown', this.onKeyDown);
+    this.element.removeEventListener('focusin', this.onFocusIn);
+    this.element.removeEventListener('pointerdown', this.onPointerDown);
+    this.element.removeEventListener('dblclick', this.onDoubleClick);
+    this.element.removeEventListener('contextmenu', this.onContextMenu);
+    removeEventListener('paste', this.onPaste);
+    removeEventListener('copy', this.onCopy);
+  }
+
+  onColumnResizeMove = (e) => {
+    this.invokeAsync('OnColumnResizePointerMoveAsync', e);
+  }
+
+  onColumnResizeUp = (e) => {
+    this.invokeAsync('OnColumnResizePointerUpAsync', e);
+    removeEventListener('pointermove', this.onColumnResizeMove);
+    removeEventListener('pointerup', this.onColumnResizeUp);
+  }
+
+  onRowResizeMove = (e) => {
+    this.invokeAsync('OnRowResizePointerMoveAsync', e);
+  }
+
+  onRowResizeUp = (e) => {
+    this.invokeAsync('OnRowResizePointerUpAsync', e);
+    removeEventListener('pointermove', this.onRowResizeMove);
+    removeEventListener('pointerup', this.onRowResizeUp);
+  }
+
+  onDrawingResizeMove = (e) => {
+    this.invokeAsync('OnDrawingResizePointerMoveAsync', e);
+  }
+
+  onDrawingResizeUp = (e) => {
+    this.invokeAsync('OnDrawingResizePointerUpAsync', e);
+    removeEventListener('pointermove', this.onDrawingResizeMove);
+    removeEventListener('pointerup', this.onDrawingResizeUp);
+  }
+
+  onDrawingMoveMove = (e) => {
+    this.invokeAsync('OnDrawingMovePointerMoveAsync', e);
+  }
+
+  onDrawingMoveUp = (e) => {
+    this.invokeAsync('OnDrawingMovePointerUpAsync', e);
+    removeEventListener('pointermove', this.onDrawingMoveMove);
+    removeEventListener('pointerup', this.onDrawingMoveUp);
+  }
+
+  onAutofillPointerMove = (e) => {
+    this.invokeAsync('OnAutofillPointerMoveAsync', e);
+  }
+
+  onAutofillPointerUp = (e) => {
+    this.dotNetRef.invokeMethodAsync('OnAutofillPointerUpAsync', this.toEventArgs(e));
+    removeEventListener('pointermove', this.onAutofillPointerMove);
+    removeEventListener('pointerup', this.onAutofillPointerUp);
+  }
+}
+
+Radzen.beginRangePickKeyHandler = function (dotNetRef) {
+  Radzen.endRangePickKeyHandler();
+  Radzen.rangePickKeyHandler = function (e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      dotNetRef.invokeMethodAsync('OnEscapeKeyAsync');
+    }
+  };
+  document.addEventListener('keydown', Radzen.rangePickKeyHandler, true);
+};
+
+Radzen.endRangePickKeyHandler = function () {
+  if (Radzen.rangePickKeyHandler) {
+    document.removeEventListener('keydown', Radzen.rangePickKeyHandler, true);
+    Radzen.rangePickKeyHandler = null;
+  }
+};
+
+class SheetEditor {
+  constructor(element, value, autoFocus, dotNetRef) {
+    this.element = element;
+    this.element.innerText = value;
+    this.dotNetRef = dotNetRef;
+    this.element.addEventListener('input', this.onInput);
+    this.element.addEventListener('keydown', this.onKeyDown);
+    this.element.addEventListener('blur', this.onBlur);
+    this.element.addEventListener('focus', this.onFocus);
+    this.element.addEventListener('paste', this.onPaste);
+    document.addEventListener('selectionchange', this.onSelectionChange);
+    if (autoFocus) {
+      this.focus();
+    }
+  }
+
+  onPaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    const selection = getSelection();
+    if (!selection.rangeCount) return;
+    selection.deleteFromDocument();
+    selection.getRangeAt(0).insertNode(document.createTextNode(text));
+    selection.collapseToEnd();
+    this.onInput();
+  };
+
+  onSelectionChange = (e) => {
+    const selection = getSelection();
+    if (!selection.focusNode) return;
+    const inside = selection.focusNode.parentElement == this.element || selection.focusNode == this.element;
+    let caretPosition = -1;
+
+    if (inside && selection.isCollapsed)
+    {
+      caretPosition = selection.focusOffset;
+    }
+
+    this.dotNetRef.invokeMethodAsync('OnSelectionChangeAsync', caretPosition);
+  };
+
+  onInput = () => {
+    // Browsers keep a placeholder <br> in an emptied contenteditable which makes innerText report "\n" for empty content
+    const text = this.element.innerText;
+    this.dotNetRef.invokeMethodAsync('OnInputAsync', text == '\n' ? '' : text);
+  };
+
+  setValue = (value, moveCaretTo) => {
+    this.element.innerText = value;
+    if (moveCaretTo != null) {
+      const range = document.createRange();
+      const el = this.element.childNodes[0];
+      range.selectNodeContents(el)
+      range.setStart(el, 0);
+      range.setEnd(el, moveCaretTo);
+      range.collapse(false);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  };
+
+  onKeyDown = (e) => {
+    if (e.key == 'Enter' && e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const range = document.createRange();
+      range.selectNodeContents(this.element);
+      range.collapse(false);
+      range.deleteContents();
+
+
+      let br = document.createElement("br");
+      range.insertNode(br);
+
+      if (!br.previousSibling || br.previousSibling.nodeName != 'BR') {
+        br = br.cloneNode();
+        range.insertNode(br);
+      }
+
+      range.setStartAfter(br);
+      range.setEndAfter(br);
+
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+       const popup = document.querySelector('.rz-spreadsheet-highlight-popup .rz-state-highlight') != null;
+       if (popup && (e.key == 'Tab' || e.key == 'ArrowUp' || e.key == 'ArrowDown')) {
+         e.stopPropagation();
+         e.preventDefault();
+         this.dotNetRef.invokeMethodAsync('OnKeyDownAsync', { key: e.key });
+       } else if (e.key != 'Enter' && e.key != 'Escape' && e.key != 'Tab' && e.key != 'F6') {
+         e.stopPropagation();
+       }
+    }
+  };
+
+  onBlur = (e) => {
+    if (e.relatedTarget && e.relatedTarget.matches('.rz-spreadsheet-editor-input') && e.relatedTarget.closest('.rz-spreadsheet') == this.element.closest('.rz-spreadsheet')) {
+      return;
+    }
+
+    this.dotNetRef.invokeMethodAsync('OnBlurAsync');
+  }
+
+  onFocus = () => {
+    this.dotNetRef.invokeMethodAsync('OnFocusAsync');
+  }
+
+  focus() {
+    this.element.focus();
+    const range = document.createRange();
+    range.selectNodeContents(this.element);
+    range.collapse(false);
+
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  dispose() {
+    this.element.removeEventListener('input', this.onInput);
+    this.element.removeEventListener('keydown', this.onKeyDown);
+    this.element.removeEventListener('blur', this.onBlur);
+    this.element.removeEventListener('focus', this.onFocus);
+    this.element.removeEventListener('paste', this.onPaste);
+    document.removeEventListener('selectionchange', this.onSelectionChange);
+  }
+}
+
+
+
+
+Radzen.createSheetEditor = (element, value, autoFocus, dotNetRef) => new SheetEditor(element, value, autoFocus, dotNetRef);
+Radzen.createSpreadsheet = (element, dotNetRef, shortcuts) => new Spreadsheet(element, dotNetRef, shortcuts);
+Radzen.createVirtualItemContainer = (scrollable, content, ref) => {
+  var height = scrollable.clientHeight;
+  var width = scrollable.clientWidth;
+  var scrollHeight = scrollable.scrollHeight;
+  var scrollWidth = scrollable.scrollWidth;
+
+  content.addEventListener('mousewheel', function (e) {
+    scrollable.scrollBy({
+      top: e.deltaY,
+      left: e.deltaX
+    });
+    e.preventDefault();
+  });
+
+  var rtl = Radzen.isRTL(scrollable);
+
+  var inflight = false;
+
+  function notifyScroll() {
+    var scrollTop = scrollable.scrollTop;
+    // In RTL the native scrollLeft is 0 at the right and negative toward the left;
+    // report a non-negative logical scroll so the C# layout math stays direction-agnostic.
+    var scrollLeft = rtl ? -scrollable.scrollLeft : scrollable.scrollLeft;
+
+    inflight = true;
+
+    ref.invokeMethodAsync('OnScroll', scrollLeft, scrollTop).finally(function () {
+      inflight = false;
+
+      if (scrollTop !== scrollable.scrollTop ||
+          scrollLeft !== (rtl ? -scrollable.scrollLeft : scrollable.scrollLeft)) {
+        notifyScroll();
+      }
+    });
+  }
+
+  scrollable.addEventListener('scroll', function () {
+    if (!inflight) {
+      notifyScroll();
+    }
+  });
+
+  var observer = new ResizeObserver(function () {
+    if (!scrollable.isConnected) {
+      observer.disconnect();
+      return;
+    }
+
+    const height = scrollable.clientHeight;
+    const width = scrollable.clientWidth;
+
+    suppressDisposed(ref.invokeMethodAsync('OnResize', width, height));
+  });
+
+  observer.observe(scrollable);
+
+  return { width, height, scrollHeight, scrollWidth };
+};
+Radzen.scrollElementTo = (scrollable, left, top) => {
+  scrollable.scrollTo({ top: top, left: Radzen.isRTL(scrollable) ? -left : left });
+};
+Radzen.createFormField = function(el) {
+  if (!el || typeof el.addEventListener !== 'function') return { dispose: function() {} };
+  function onFocusIn() { el.classList.add('rz-state-focused'); }
+  function onFocusOut() { el.classList.remove('rz-state-focused'); }
+  function onMouseDown(e) {
+    if (e.button !== 0 || e.defaultPrevented || !el.hasAttribute('data-focus-on-click')) return;
+    var content = el.querySelector('.rz-form-field-content');
+    var target = e.target;
+    if (!content || !target || !target.closest) return;
+    var slots = '.rz-form-field-start, .rz-form-field-end';
+    if (target !== content) {
+      var slot = target.closest(slots);
+      if (!slot || slot.parentNode !== content) return;
+      var interactive = target.closest('a, button, input, select, textarea, label, [tabindex], [contenteditable]');
+      if (interactive && slot.contains(interactive)) return;
+    }
+    var candidates = content.querySelectorAll('input, select, textarea, [tabindex], [contenteditable]');
+    for (var i = 0; i < candidates.length; i++) {
+      var candidate = candidates[i];
+      if (candidate.disabled || candidate.type === 'hidden' || candidate.tabIndex < 0) continue;
+      if (candidate.closest(slots) || !candidate.getClientRects().length) continue;
+      e.preventDefault();
+      candidate.focus();
+      return;
+    }
+  }
+  el.addEventListener('focusin', onFocusIn);
+  el.addEventListener('focusout', onFocusOut);
+  el.addEventListener('mousedown', onMouseDown);
+  return { dispose: function() {
+    el.removeEventListener('focusin', onFocusIn);
+    el.removeEventListener('focusout', onFocusOut);
+    el.removeEventListener('mousedown', onMouseDown);
+  }};
+};
+Radzen.createSignaturePad = function(element, ref, strokeColor, strokeWidth, disabled, initialValue) {
+  var noop = { update: function() {}, clear: function() {}, dispose: function() {} };
+  if (!element) return noop;
+
+  var canvas = element.querySelector('canvas');
+  if (!canvas) return noop;
+
+  var ctx = canvas.getContext('2d');
+  var drawing = false;
+  var paths = [];
+  var currentPath = [];
+
+  function syncSize() {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.round(rect.width);
+    var h = Math.round(rect.height);
+    if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
+      canvas.width = w;
+      canvas.height = h;
+      redraw();
+    }
+  }
+
+  function getPointerPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
+  }
+
+  function redraw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (var i = 0; i < paths.length; i++) {
+      var path = paths[i];
+      if (path.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
+      for (var j = 1; j < path.length; j++) {
+        ctx.lineTo(path[j].x, path[j].y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function loadImage(dataUrl) {
+    if (!dataUrl) return;
+    var img = new Image();
+    img.onload = function() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = dataUrl;
+  }
+
+  syncSize();
+
+  if (initialValue) {
+    loadImage(initialValue);
+  }
+
+  var resizeObserver = new ResizeObserver(function() { syncSize(); });
+  resizeObserver.observe(canvas);
+
+  function onPointerDown(e) {
+    if (disabled) return;
+    drawing = true;
+    currentPath = [getPointerPos(e)];
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  function onPointerMove(e) {
+    if (!drawing || disabled) return;
+    var pos = getPointerPos(e);
+    currentPath.push(pos);
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (currentPath.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(currentPath[currentPath.length - 2].x, currentPath[currentPath.length - 2].y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+    e.preventDefault();
+  }
+
+  function onPointerUp(e) {
+    if (!drawing || disabled) return;
+    drawing = false;
+    if (currentPath.length > 0) {
+      paths.push(currentPath);
+      currentPath = [];
+    }
+    try { suppressDisposed(ref.invokeMethodAsync('RadzenSignaturePad.OnStrokeEnd', canvas.toDataURL('image/png'))); } catch (ex) { }
+    e.preventDefault();
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerUp);
+  canvas.style.touchAction = 'none';
+
+  return {
+    update: function(newStrokeColor, newStrokeWidth, newDisabled) {
+      strokeColor = newStrokeColor;
+      strokeWidth = newStrokeWidth;
+      disabled = newDisabled;
+      redraw();
+    },
+    clear: function() {
+      paths = [];
+      currentPath = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    },
+    dispose: function() {
+      resizeObserver.disconnect();
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
+    }
+  };
+};
+Radzen.itemListKeydown = function (e) {
+  var el = e.target;
+  if (!el || !el.classList) return;
+  var radio = el.classList.contains('rz-radio-button-list');
+  var checkbox = el.classList.contains('rz-checkbox-list');
+  if (!radio && !checkbox) return;
+  var key = e.code ? e.code : e.key;
+  if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown') {
+    var horizontal = key === 'ArrowLeft' || key === 'ArrowRight';
+    if (radio || el.classList.contains(horizontal ? 'rz-checkbox-list-horizontal' : 'rz-checkbox-list-vertical')) {
+      e.preventDefault();
+    }
+  } else if (key === 'Home' || key === 'End' || key === 'Space' || key === 'Enter') {
+    e.preventDefault();
+  }
+};
+document.addEventListener('keydown', Radzen.itemListKeydown);
+Radzen.chatKeydown = function (e) {
+  var el = e.target;
+  if (!el || !el.classList || !el.classList.contains('rz-chat-textarea')) return;
+  var container = el.closest('.rz-chat-input');
+  var popupOpen = container && container.querySelector('.rz-chat-mention-popup');
+  if (e.key === 'Enter') {
+    if (!e.shiftKey || popupOpen) {
+      e.preventDefault();
+    }
+  } else if (popupOpen && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault();
+  } else if ((e.key === 'Backspace' || e.key === 'Delete') && el.dataset.mentionSegments) {
+    var start = el.selectionStart;
+    var end = el.selectionEnd;
+    var segments = el.dataset.mentionSegments.split(',');
+    for (var i = 0; i < segments.length; i++) {
+      var parts = segments[i].split(':');
+      var segmentStart = parseInt(parts[0], 10);
+      var segmentEnd = segmentStart + parseInt(parts[1], 10);
+      var hit;
+      if (start !== end) {
+        hit = segmentStart < end && segmentEnd > start;
+      } else {
+        var target = e.key === 'Backspace' ? start - 1 : start;
+        hit = target >= 0 && segmentStart <= target && segmentEnd > target;
+      }
+      if (hit) {
+        e.preventDefault();
+        break;
+      }
+    }
+  }
+};
+document.addEventListener('keydown', Radzen.chatKeydown);
+Radzen.aiPromptKeydown = function (e) {
+  if (e.isComposing) return;
+  var el = e.target;
+  if (!el || !el.classList || !el.classList.contains('rz-aiprompt-textarea')) return;
+  if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+};
+document.addEventListener('keydown', Radzen.aiPromptKeydown);
+Radzen.popupTriggerKeydown = function (e) {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  var el = e.target;
+  if (!el || !el.classList) return;
+  var key = e.code ? e.code : e.key;
+  var vertical = key === 'ArrowUp' || key === 'ArrowDown';
+  if (el.classList.contains('rz-splitbutton-menubutton')) {
+    if (vertical) e.preventDefault();
+  } else if (el.classList.contains('rz-menu-list') || el.classList.contains('rz-navigation-menu')) {
+    if (vertical || key === 'Home' || key === 'End' || key === 'Space') e.preventDefault();
+  } else if (el.classList.contains('rz-navigation-item-wrapper') && el.getAttribute('aria-haspopup')) {
+    if (vertical || key === 'Home' || key === 'End' || key === 'Space') e.preventDefault();
+  } else if (el.classList.contains('rz-dropdown') || el.classList.contains('rz-listbox')) {
+    if (vertical || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Space') e.preventDefault();
+  } else if (el.classList.contains('rz-colorpicker')) {
+    if (key === 'Space') e.preventDefault();
+  }
+};
+document.addEventListener('keydown', Radzen.popupTriggerKeydown);
+Radzen.datePickerKeydown = function (e) {
+  if (e.isComposing) return;
+  var el = e.target;
+  if (!el || !el.classList) return;
+  var key = e.code ? e.code : e.key;
+  if (el.tagName === 'INPUT' && el.classList.contains('rz-inputtext') && el.closest('.rz-datepicker')) {
+    if (key === 'Enter' || (e.altKey && key === 'ArrowDown')) {
+      e.preventDefault();
+    }
+  } else if (el.classList.contains('rz-calendar-month-cell') || el.classList.contains('rz-calendar-year-cell')) {
+    if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown'
+      || key === 'Home' || key === 'End' || key === 'PageUp' || key === 'PageDown') {
+      e.preventDefault();
+    }
+  }
+};
+document.addEventListener('keydown', Radzen.datePickerKeydown);
+Radzen.tabsKeydown = function (e) {
+  var el = e.target;
+  if (!el || !el.classList || !el.classList.contains('rz-tabview-nav') || el.getAttribute('role') !== 'tablist') return;
+  var key = e.code ? e.code : e.key;
+  var vertical = el.getAttribute('aria-orientation') === 'vertical';
+  var previous = vertical ? 'ArrowUp' : 'ArrowLeft';
+  var next = vertical ? 'ArrowDown' : 'ArrowRight';
+  if (key === previous || key === next || key === 'Home' || key === 'End' || key === 'Space' || key === 'Enter') {
+    e.preventDefault();
+  }
+};
+document.addEventListener('keydown', Radzen.tabsKeydown);
+Radzen.menuKeydown = function (e) {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+  var el = e.target;
+  if (!el || !el.closest) return;
+  if (el.closest('input, textarea, select, button, [contenteditable]')) return;
+  var menu = el.closest('ul.rz-menu');
+  if (!menu) return;
+  var role = menu.getAttribute('role');
+  if (role !== 'menubar' && role !== 'menu') return;
+  var key = e.code ? e.code : e.key;
+  if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown'
+    || key === 'Home' || key === 'End' || key === 'Enter' || key === 'Space' || key === 'Escape'
+    || (e.key && e.key.length === 1)) {
+    e.preventDefault();
+  }
+};
+document.addEventListener('keydown', Radzen.menuKeydown);
+
+Radzen.createMarkdownEditor = function (editable, textarea, instance, shortcuts) {
+  function invoke(editor, name, ...args) {
+    try {
+      return editor.instance.invokeMethodAsync(name, ...args).catch(() => null);
+    } catch {
+      return Promise.resolve(null);
+    }
+  }
+
+  function textNodes(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const result = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      result.push(node);
+    }
+    return result;
+  }
+
+  function render(editor, html, flat) {
+    editor.editable.innerHTML = html;
+    editor.segments = [];
+    const nodes = textNodes(editor.editable);
+    let index = 0;
+    let used = 0;
+    for (let i = 0; i + 2 < flat.length; i += 3) {
+      while (index < nodes.length && used >= nodes[index].length) {
+        index++;
+        used = 0;
+      }
+      if (index >= nodes.length) {
+        break;
+      }
+      editor.segments.push({ start: flat[i], end: flat[i + 1], length: flat[i + 2], node: nodes[index], offset: used });
+      used += flat[i + 2];
+    }
+  }
+
+  function isLinear(segment) {
+    return segment.end - segment.start === segment.length;
+  }
+
+  function follows(reference, node) {
+    const position = reference.compareDocumentPosition(node);
+    return (position & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 || (position & Node.DOCUMENT_POSITION_CONTAINED_BY) !== 0;
+  }
+
+  function toSource(editor, node, offset) {
+    const segments = editor.segments;
+    if (!segments.length) {
+      return 0;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      let last = null;
+      for (const segment of segments) {
+        if (segment.node !== node) {
+          continue;
+        }
+        last = segment;
+        if (offset <= segment.offset + segment.length) {
+          const delta = Math.max(0, offset - segment.offset);
+          if (isLinear(segment)) {
+            return segment.start + delta;
+          }
+          return delta >= segment.length ? segment.end : segment.start;
+        }
+      }
+      return last ? last.end : 0;
+    }
+    const reference = offset < node.childNodes.length ? node.childNodes[offset] : null;
+    if (reference && reference.nodeType === Node.ELEMENT_NODE && reference.dataset.gap !== undefined) {
+      return parseInt(reference.dataset.gap, 10);
+    }
+    let inside = null;
+    for (const segment of segments) {
+      if (reference ? reference === segment.node || follows(reference, segment.node) : follows(node, segment.node) && !node.contains(segment.node)) {
+        return reference ? segment.start : inside ? inside.end : segment.start;
+      }
+      if (node.contains(segment.node)) {
+        inside = segment;
+      }
+    }
+    return inside ? inside.end : segments[segments.length - 1].end;
+  }
+
+  function toDom(editor, offset) {
+    const segments = editor.segments;
+    if (!segments.length) {
+      return { node: editor.editable, offset: 0 };
+    }
+    let previous = null;
+    for (const segment of segments) {
+      if (offset < segment.start) {
+        if (previous && offset - previous.end <= segment.start - offset) {
+          return { node: previous.node, offset: previous.offset + previous.length };
+        }
+        return { node: segment.node, offset: segment.offset };
+      }
+      previous = segment;
+      if (offset <= segment.end) {
+        if (isLinear(segment)) {
+          return { node: segment.node, offset: segment.offset + offset - segment.start };
+        }
+        return { node: segment.node, offset: segment.offset + (offset === segment.end ? segment.length : 0) };
+      }
+    }
+    const last = segments[segments.length - 1];
+    return { node: last.node, offset: last.offset + last.length };
+  }
+
+  function setSelection(editor, start, end) {
+    const from = toDom(editor, start);
+    const to = toDom(editor, end);
+    const range = document.createRange();
+    range.setStart(from.node, from.offset);
+    range.setEnd(to.node, to.offset);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const covered = offset => editor.segments.some(segment => offset >= segment.start && offset <= segment.end);
+    track(editor, from, to, covered(start) ? start : toSource(editor, from.node, from.offset), covered(end) ? end : toSource(editor, to.node, to.offset));
+  }
+
+  function track(editor, from, to, start, end) {
+    editor.selection = [start, end];
+    editor.tracked = { from, to };
+  }
+
+  function matchesTracked(editor, node, offset, which) {
+    const tracked = editor.tracked && editor.tracked[which];
+    return !!tracked && tracked.node === node && tracked.offset === offset;
+  }
+
+  function currentSelection(editor) {
+    if (!editor.textarea.hidden) {
+      return [editor.textarea.selectionStart, editor.textarea.selectionEnd];
+    }
+    const selection = window.getSelection();
+    if (!selection.rangeCount || !editor.editable.contains(selection.anchorNode)) {
+      return editor.selection;
+    }
+    const range = selection.getRangeAt(0);
+    if (matchesTracked(editor, range.startContainer, range.startOffset, 'from') && matchesTracked(editor, range.endContainer, range.endOffset, 'to')) {
+      return editor.selection;
+    }
+    let start = toSource(editor, range.startContainer, range.startOffset);
+    let end = toSource(editor, range.endContainer, range.endOffset);
+    if (start > end) {
+      [start, end] = [end, start];
+    }
+    track(editor, { node: range.startContainer, offset: range.startOffset }, { node: range.endContainer, offset: range.endOffset }, start, end);
+    return [start, end];
+  }
+
+  function applyUpdate(editor, update) {
+    if (!update) {
+      return;
+    }
+    if (update.version !== editor.version) {
+      settle(editor);
+      return;
+    }
+    if (!editor.textarea.hidden) {
+      if (update.text !== null && update.text !== undefined) {
+        editor.textarea.value = update.text;
+        editor.value = update.text;
+        editor.textarea.setSelectionRange(update.selectionStart, update.selectionEnd);
+      }
+      editor.selection = [update.selectionStart, update.selectionEnd];
+      editor.reported = editor.selection;
+      settle(editor);
+      return;
+    }
+    if (update.html !== null && update.html !== undefined) {
+      const sent = editor.sent;
+      const now = domSelection(editor);
+      const stayed = !now || !editor.sentDom || (now.anchorNode === editor.sentDom.anchorNode && now.anchorOffset === editor.sentDom.anchorOffset && now.focusNode === editor.sentDom.focusNode && now.focusOffset === editor.sentDom.focusOffset);
+      const live = sent && !editor.virtual && !stayed && document.activeElement === editor.editable ? currentSelection(editor) : null;
+      const unmoved = !live || (live[0] === sent[0] && live[1] === sent[1]) || (live[0] === live[1] && (live[0] === sent[0] || live[0] === sent[1]));
+      const delta = sent ? update.selectionStart - sent[1] : 0;
+      const shift = offset => offset >= sent[1] ? offset + delta : offset > sent[0] ? update.selectionStart : offset;
+      let target = unmoved ? [update.selectionStart, update.selectionEnd] : [shift(live[0]), shift(live[1])];
+      if (editor.virtual) {
+        const offset = transform(editor, editor.virtual.offset, editor.virtual.version);
+        target = [offset, offset];
+        if (editor.pending === 0) {
+          editor.virtual = null;
+        }
+      }
+      render(editor, update.html, update.segments || []);
+      editor.reported = target;
+      if (document.activeElement === editor.editable) {
+        setSelection(editor, target[0], target[1]);
+      } else {
+        editor.selection = [update.selectionStart, update.selectionEnd];
+        editor.tracked = null;
+      }
+    }
+  }
+
+  function settle(editor) {
+    if (editor.pending === 0) {
+      editor.virtual = null;
+    }
+  }
+
+  function enqueue(editor, work) {
+    editor.queue = editor.queue.then(work, work);
+    return editor.queue;
+  }
+
+  function edit(editor, name, args, guess) {
+    editor.pending++;
+    guess = guess || 0;
+    editor.pendingDelta += guess;
+    const order = ++editor.queued;
+    return enqueue(editor, () => {
+      editor.version++;
+      const resolved = typeof args === 'function' ? args() : args;
+      if (!resolved) {
+        editor.pending--;
+        editor.pendingDelta -= guess;
+        return null;
+      }
+      editor.sent = resolved.length >= 2 && typeof resolved[0] === 'number' && typeof resolved[1] === 'number' ? [resolved[0], resolved[1]] : null;
+      editor.sentDom = domSelection(editor);
+      const version = editor.version;
+      if (editor.virtual && editor.sent && order > editor.virtual.order) {
+        editor.virtual = { offset: resolved[0] + Math.max(0, estimate(name, resolved)), version, order };
+      }
+      return invoke(editor, name, ...resolved, editor.version).then(update => {
+        editor.pending--;
+        editor.pendingDelta -= guess;
+        applyUpdate(editor, update);
+        if (editor.sent) {
+          editor.applied.push({ start: editor.sent[0], end: editor.sent[1], delta: update ? update.selectionStart - editor.sent[1] : 0, version });
+          if (editor.applied.length > 100) {
+            editor.applied.shift();
+          }
+        }
+        editor.rendered = version;
+        editor.sent = null;
+      });
+    });
+  }
+
+  function domSelection(editor) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || !editor.editable.contains(selection.anchorNode)) {
+      return null;
+    }
+    return { anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset, focusNode: selection.focusNode, focusOffset: selection.focusOffset };
+  }
+
+  function rangeFor(editor, event) {
+    const type = event.inputType || '';
+    const deleting = type.indexOf('delete') === 0;
+    const backward = type.indexOf('Backward') > 0;
+    const around = caret => deleting ? (backward ? [Math.max(0, caret - 1), caret] : [caret, caret + 1]) : [caret, caret];
+    if (editor.virtual) {
+      const virtual = editor.virtual;
+      return () => around(transform(editor, virtual.offset, virtual.version));
+    }
+    const captured = targetRange(editor, event);
+    if (editor.pending === 0) {
+      return () => captured;
+    }
+    const live = currentSelection(editor);
+    const version = editor.rendered;
+    return () => {
+      if (live[0] === live[1] && (deleting || captured[0] === captured[1])) {
+        return around(transform(editor, live[0], version));
+      }
+      if (captured[0] !== captured[1] && editor.applied.some(entry => entry.version > version && entry.start === captured[0] && entry.end === captured[1])) {
+        const after = transform(editor, captured[1], version);
+        return deleting ? null : [after, after];
+      }
+      return [transform(editor, captured[0], version), transform(editor, captured[1], version)];
+    };
+  }
+
+  function estimate(name, resolved) {
+    if (name === 'OnEditAsync') {
+      return (resolved[2] || '').length - (resolved[1] - resolved[0]);
+    }
+    return name === 'OnInsertParagraphAsync' || name === 'OnInsertLineBreakAsync' ? 1 : 0;
+  }
+
+  function transform(editor, offset, version) {
+    for (const entry of editor.applied) {
+      if (entry.version <= version) {
+        continue;
+      }
+      if (offset >= entry.end) {
+        offset += entry.delta;
+      } else if (offset > entry.start) {
+        offset = entry.start;
+      }
+    }
+    return offset;
+  }
+
+  function targetRange(editor, event) {
+    const type = event.inputType || '';
+    const live = currentSelection(editor);
+    const ranges = event.getTargetRanges ? event.getTargetRanges() : [];
+    if (!ranges.length) {
+      return live;
+    }
+    const range = ranges[0];
+    const startMatches = matchesTracked(editor, range.startContainer, range.startOffset, 'from');
+    const endMatches = matchesTracked(editor, range.endContainer, range.endOffset, 'to');
+    if (startMatches && endMatches) {
+      return editor.selection;
+    }
+    const sameNode = range.startContainer === range.endContainer;
+    let start = startMatches ? editor.selection[0] : endMatches && sameNode ? editor.selection[1] - (range.endOffset - range.startOffset) : toSource(editor, range.startContainer, range.startOffset);
+    let end = endMatches ? editor.selection[1] : startMatches && sameNode ? editor.selection[0] + (range.endOffset - range.startOffset) : toSource(editor, range.endContainer, range.endOffset);
+    if (start > end) {
+      [start, end] = [end, start];
+    }
+    if (start === end && type.indexOf('delete') === 0) {
+      return type.indexOf('Backward') > 0 ? [Math.max(0, start - 1), start] : [start, start + 1];
+    }
+    return [start, end];
+  }
+
+  function onBeforeInput(editor, event) {
+    const type = event.inputType || '';
+    if (editor.composing || type === 'insertCompositionText' || type === 'deleteCompositionText') {
+      return;
+    }
+    event.preventDefault();
+    const range = rangeFor(editor, event);
+    const live = currentSelection(editor);
+    const kind = live[0] !== live[1] ? type + ':selection' : atTextStart(editor) ? type + ':right' : type;
+    switch (type) {
+      case 'insertText':
+      case 'insertReplacementText': {
+        const text = event.data !== null && event.data !== undefined ? event.data : event.dataTransfer ? event.dataTransfer.getData('text/plain') : '';
+        if (text) {
+          edit(editor, 'OnEditAsync', () => [...range(), text, kind], text.length - (live[1] - live[0]));
+        }
+        break;
+      }
+      case 'insertParagraph':
+        edit(editor, 'OnInsertParagraphAsync', () => range(), 1);
+        break;
+      case 'insertLineBreak':
+        edit(editor, 'OnInsertLineBreakAsync', () => range(), 1);
+        break;
+      case 'insertFromPaste':
+      case 'insertFromDrop': {
+        const text = pastedMarkdown(editor, event.dataTransfer);
+        if (text) {
+          edit(editor, 'OnEditAsync', () => [...range(), text, kind], text.length - (live[1] - live[0]));
+        }
+        break;
+      }
+      case 'historyUndo':
+        edit(editor, 'OnUndoAsync', []);
+        break;
+      case 'historyRedo':
+        edit(editor, 'OnRedoAsync', []);
+        break;
+      default:
+        if (type.indexOf('delete') === 0) {
+          edit(editor, 'OnEditAsync', () => {
+            const resolved = range();
+            return resolved && resolved[1] > resolved[0] ? [resolved[0], resolved[1], '', kind] : null;
+          }, live[0] === live[1] ? -1 : live[0] - live[1]);
+        }
+        break;
+    }
+  }
+
+  function atTextStart(editor) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || !selection.isCollapsed) {
+      return false;
+    }
+    const range = selection.getRangeAt(0);
+    return range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0 && editor.editable.contains(range.startContainer);
+  }
+
+  function pastedMarkdown(editor, dataTransfer) {
+    if (!dataTransfer) {
+      return '';
+    }
+    const plain = dataTransfer.getData('text/plain');
+    if (closestBlock(editor) === 'PRE') {
+      return plain;
+    }
+    const markdown = dataTransfer.getData('text/markdown');
+    if (markdown) {
+      return markdown;
+    }
+    const html = dataTransfer.getData('text/html');
+    if (html) {
+      const converted = htmlToMarkdown(html);
+      if (converted !== null) {
+        return converted;
+      }
+    }
+    return plain;
+  }
+
+  const blockTags = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'PRE', 'TABLE', 'HR', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'MAIN', 'NAV', 'ASIDE', 'FIGURE', 'FIGCAPTION', 'DL', 'DT', 'DD', 'FORM', 'FIELDSET']);
+
+  function htmlToMarkdown(html) {
+    const body = new DOMParser().parseFromString(html, 'text/html').body;
+    if (!body.querySelector('b,strong,i,em,s,del,strike,code,pre,a[href],img,h1,h2,h3,h4,h5,h6,ul,ol,li,blockquote,table,hr,[style*="font-weight"],[style*="font-style"],[style*="line-through"]')) {
+      return null;
+    }
+    return markdownBlocks(body).replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function markdownBlocks(container) {
+    const out = [];
+    let run = [];
+    const flush = () => {
+      if (run.length) {
+        const text = markdownInlines(run).trim();
+        if (text) {
+          out.push({ text, list: false });
+        }
+        run = [];
+      }
+    };
+    for (const node of container.childNodes) {
+      if (node.nodeType !== Node.ELEMENT_NODE || !blockTags.has(node.tagName)) {
+        run.push(node);
+        continue;
+      }
+      flush();
+      const block = markdownBlock(node);
+      if (block) {
+        out.push({ text: block, list: node.tagName === 'UL' || node.tagName === 'OL' });
+      }
+    }
+    flush();
+    return out.map((part, index) => (index === 0 ? '' : part.list && container.tagName === 'LI' ? '\n' : '\n\n') + part.text).join('');
+  }
+
+  function hasBlockChildren(el) {
+    return [...el.children].some(child => blockTags.has(child.tagName));
+  }
+
+  function markdownBlock(el) {
+    switch (el.tagName) {
+      case 'H1': case 'H2': case 'H3': case 'H4': case 'H5': case 'H6':
+        return '#'.repeat(parseInt(el.tagName[1], 10)) + ' ' + markdownInlines(el.childNodes).replace(/\s*\n\s*/g, ' ').trim();
+      case 'BLOCKQUOTE':
+        return markdownBlocks(el).split('\n').map(line => ('> ' + line).trimEnd()).join('\n');
+      case 'PRE': {
+        const code = el.querySelector('code') || el;
+        const language = ((code.className || '').match(/language-([\w#+.-]+)/) || [])[1] || '';
+        const text = code.textContent.replace(/\n$/, '');
+        const fence = backticks(text, 3);
+        return fence + language + '\n' + text + '\n' + fence;
+      }
+      case 'UL': case 'OL':
+        return markdownList(el);
+      case 'HR':
+        return '---';
+      case 'TABLE':
+        return markdownTable(el);
+      default:
+        return hasBlockChildren(el) ? markdownBlocks(el) : markdownInlines(el.childNodes).trim();
+    }
+  }
+
+  function backticks(text, minimum) {
+    return '`'.repeat(Math.max(minimum, (text.match(/`+/g) || []).reduce((longest, run) => Math.max(longest, run.length), 0) + 1));
+  }
+
+  function markdownList(el) {
+    const ordered = el.tagName === 'OL';
+    let number = parseInt(el.getAttribute('start'), 10) || 1;
+    const items = [];
+    for (const li of el.children) {
+      if (li.tagName !== 'LI') {
+        continue;
+      }
+      const marker = ordered ? (number++) + '. ' : '- ';
+      const checkbox = li.querySelector(':scope > input[type="checkbox"], :scope > p:first-child > input[type="checkbox"]');
+      const body = (checkbox ? (checkbox.checked ? '[x] ' : '[ ] ') : '') + markdownBlocks(li);
+      const indent = ' '.repeat(marker.length);
+      items.push(marker + body.split('\n').map((line, index) => index === 0 ? line : line ? indent + line : line).join('\n'));
+    }
+    return items.join('\n');
+  }
+
+  function markdownTable(el) {
+    const rows = [...el.querySelectorAll('tr')].filter(row => row.closest('table') === el);
+    if (!rows.length) {
+      return '';
+    }
+    const cells = row => [...row.children].map(cell => markdownInlines(cell.childNodes).replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|').trim());
+    const alignment = cell => {
+      const align = ((cell.style && cell.style.textAlign) || cell.getAttribute('align') || '').toLowerCase();
+      return align === 'left' ? ':--' : align === 'center' ? ':-:' : align === 'right' ? '--:' : '---';
+    };
+    const columns = Math.max(...rows.map(row => row.children.length));
+    const line = values => '| ' + Array.from({ length: columns }, (_, index) => values[index] || '').join(' | ') + ' |';
+    const lines = [line(cells(rows[0])), line([...rows[0].children].map(alignment))];
+    for (const row of rows.slice(1)) {
+      lines.push(line(cells(row)));
+    }
+    return lines.join('\n');
+  }
+
+  function markdownInlines(nodes) {
+    let out = '';
+    for (const node of nodes) {
+      out += markdownInline(node);
+    }
+    return out;
+  }
+
+  function styled(el, property, test) {
+    return !!(el.style && test(String(el.style[property] || '')));
+  }
+
+  function wrapMark(marker, text) {
+    const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    return match[2] ? match[1] + marker + match[2] + marker + match[3] : text;
+  }
+
+  function markdownInline(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent.replace(/\u200B/g, '').replace(/\s+/g, ' ').replace(/([\\`*_{}\[\]()#+\-.!|<>~])/g, '\\$1');
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return '';
+    }
+    if (blockTags.has(node.tagName)) {
+      return '\n' + markdownBlock(node) + '\n';
+    }
+    switch (node.tagName) {
+      case 'BR':
+        return '  \n';
+      case 'INPUT': case 'SCRIPT': case 'STYLE': case 'TEMPLATE':
+        return '';
+      case 'CODE': {
+        const text = node.textContent.replace(/\u200B/g, '');
+        const ticks = backticks(text, 1);
+        return text ? ticks + (text.startsWith('`') || text.endsWith('`') ? ' ' + text + ' ' : text) + ticks : '';
+      }
+      case 'IMG':
+        return '![' + (node.getAttribute('alt') || '').replace(/[\[\]]/g, '\\$&') + '](' + (node.getAttribute('src') || '') + ')';
+    }
+    let text = markdownInlines(node.childNodes);
+    if (node.tagName === 'A' && node.getAttribute('href')) {
+      return '[' + (text.trim() || node.getAttribute('href')) + '](' + node.getAttribute('href') + ')';
+    }
+    if (node.tagName === 'B' || node.tagName === 'STRONG' || styled(node, 'fontWeight', weight => weight === 'bold' || weight === 'bolder' || parseInt(weight, 10) >= 600)) {
+      text = wrapMark('**', text);
+    }
+    if (node.tagName === 'I' || node.tagName === 'EM' || styled(node, 'fontStyle', style => style === 'italic' || style === 'oblique')) {
+      text = wrapMark('*', text);
+    }
+    if (node.tagName === 'S' || node.tagName === 'DEL' || node.tagName === 'STRIKE' || styled(node, 'textDecoration', decoration => decoration.includes('line-through'))) {
+      text = wrapMark('~~', text);
+    }
+    return text;
+  }
+
+  function onCopy(editor, event, cut) {
+    const selection = window.getSelection();
+    if (!event.clipboardData || !selection.rangeCount || selection.isCollapsed || !editor.editable.contains(selection.anchorNode)) {
+      return;
+    }
+    const [start, end] = currentSelection(editor);
+    const cached = editor.markdown;
+    if (!cached || cached.start !== start || cached.end !== end || !cached.text) {
+      return;
+    }
+    const container = document.createElement('div');
+    container.appendChild(selection.getRangeAt(0).cloneContents());
+    event.clipboardData.setData('text/html', container.innerHTML);
+    event.clipboardData.setData('text/plain', selection.toString());
+    event.clipboardData.setData('text/markdown', cached.text);
+    event.preventDefault();
+    if (cut) {
+      edit(editor, 'OnEditAsync', [start, end, '', 'deleteByCut:selection'], start - end);
+    }
+  }
+
+  function onCompositionStart(editor) {
+    editor.composing = true;
+    editor.compositionRange = currentSelection(editor);
+  }
+
+  function onCompositionEnd(editor, event) {
+    editor.composing = false;
+    const [start, end] = editor.compositionRange || currentSelection(editor);
+    edit(editor, 'OnEditAsync', [start, end, event.data || '', 'insertCompositionText']);
+  }
+
+  function closestBlock(editor) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) {
+      return null;
+    }
+    let node = selection.getRangeAt(0).startContainer;
+    while (node && node !== editor.editable) {
+      if (node.nodeType === 1 && (node.tagName === 'LI' || node.tagName === 'TABLE' || node.tagName === 'PRE')) {
+        return node.tagName;
+      }
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  function closestCell(editor, node) {
+    while (node && node !== editor.editable && !(node.nodeType === 1 && (node.tagName === 'TD' || node.tagName === 'TH'))) {
+      node = node.parentNode;
+    }
+    return node && node !== editor.editable ? node : null;
+  }
+
+  function placeCaret(selection, container, atEnd) {
+    const nodes = textNodes(container);
+    const last = nodes[nodes.length - 1];
+    const range = document.createRange();
+    if (atEnd) {
+      range.setStart(last || container, last ? last.length : container.childNodes.length);
+    } else {
+      range.setStart(nodes.length ? nodes[0] : container, 0);
+    }
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function moveAcrossCells(editor, forward) {
+    const selection = window.getSelection();
+    const node = selection.rangeCount ? closestCell(editor, selection.anchorNode) : null;
+    if (!node) {
+      return;
+    }
+    const cells = Array.from(node.closest('table').querySelectorAll('td, th'));
+    const target = cells[cells.indexOf(node) + (forward ? 1 : -1)];
+    if (!target) {
+      if (forward) {
+        edit(editor, 'OnInsertRowAsync', () => currentSelection(editor));
+      }
+      return;
+    }
+    placeCaret(selection, target, false);
+  }
+
+  function moveAcrossRows(editor, down) {
+    const selection = window.getSelection();
+    const node = selection.rangeCount && selection.isCollapsed ? closestCell(editor, selection.anchorNode) : null;
+    if (!node) {
+      return false;
+    }
+    const row = node.parentNode;
+    const rows = Array.from(row.closest('table').rows);
+    const table = row.closest('table');
+    const target = rows[rows.indexOf(row) + (down ? 1 : -1)];
+    const outside = down ? table.nextElementSibling : table.previousElementSibling;
+    if (!target && !outside) {
+      return false;
+    }
+    placeCaret(selection, target ? target.cells[Math.min(node.cellIndex, target.cells.length - 1)] : outside, !target && !down);
+    return true;
+  }
+
+  function onKeyDown(editor, event) {
+    if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && editor.textarea.hidden && editor.pending > 0) {
+      const [start, end] = currentSelection(editor);
+      if (start === end) {
+        event.preventDefault();
+        const base = editor.virtual ? transform(editor, editor.virtual.offset, editor.virtual.version) : transform(editor, start, editor.rendered) + editor.pendingDelta;
+        editor.virtual = { offset: Math.max(0, base + (event.key === 'ArrowRight' ? 1 : -1)), version: editor.version + editor.pending, order: editor.queued };
+        return;
+      }
+    }
+    if ((event.key === 'Home' || event.key === 'End') && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && editor.textarea.hidden && closestBlock(editor) === 'TABLE') {
+      const selection = window.getSelection();
+      const cell = closestCell(editor, selection.focusNode);
+      if (cell) {
+        event.preventDefault();
+        const nodes = textNodes(cell);
+        if (event.key === 'End') {
+          const lastNode = nodes[nodes.length - 1];
+          selection.extend(lastNode || cell, lastNode ? lastNode.length : cell.childNodes.length);
+        } else {
+          selection.extend(nodes[0] || cell, 0);
+        }
+        return;
+      }
+    }
+    if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && editor.textarea.hidden && moveAcrossRows(editor, event.key === 'ArrowDown')) {
+      event.preventDefault();
+      return;
+    }
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && editor.textarea.hidden && closestBlock(editor) === 'TABLE') {
+      event.preventDefault();
+      moveAcrossCells(editor, !event.shiftKey);
+      return;
+    }
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && editor.textarea.hidden && closestBlock(editor) === 'PRE') {
+      event.preventDefault();
+      edit(editor, 'OnEditAsync', () => [...currentSelection(editor), '\t', 'insertText']);
+      return;
+    }
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && editor.textarea.hidden) {
+      if (closestBlock(editor) === 'LI') {
+        event.preventDefault();
+        edit(editor, 'OnIndentAsync', () => [...currentSelection(editor), event.shiftKey]);
+        return;
+      }
+    }
+    if (!(event.ctrlKey || event.metaKey) || !event.code) {
+      return;
+    }
+    if (event.code === 'KeyZ' && !event.altKey) {
+      event.preventDefault();
+      edit(editor, event.shiftKey ? 'OnRedoAsync' : 'OnUndoAsync', []);
+      return;
+    }
+    if (event.code === 'KeyY' && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      edit(editor, 'OnRedoAsync', []);
+      return;
+    }
+    let key = 'Ctrl+';
+    if (event.altKey) key += 'Alt+';
+    if (event.shiftKey) key += 'Shift+';
+    key += event.code.replace('Key', '').replace('Digit', '').replace('Numpad', '');
+    if (editor.shortcuts.includes(key)) {
+      event.preventDefault();
+      invoke(editor, 'ExecuteShortcutAsync', key);
+    }
+  }
+
+  function onClick(editor, event) {
+    const checkbox = event.target;
+    if (!(checkbox instanceof HTMLInputElement) || checkbox.type !== 'checkbox') {
+      return;
+    }
+    event.preventDefault();
+    editor.editable.focus();
+    const segment = editor.segments.find(s => s.node === checkbox.nextSibling || follows(checkbox, s.node));
+    if (segment) {
+      edit(editor, 'OnToggleCheckAsync', [segment.start]);
+    }
+  }
+
+  function onContextMenu(editor, event) {
+    const cell = event.target && event.target.closest ? event.target.closest('td,th') : null;
+    if (!cell || !editor.editable.contains(cell)) {
+      return;
+    }
+    const range = document.caretRangeFromPoint ? document.caretRangeFromPoint(event.clientX, event.clientY) : null;
+    if (range && cell.contains(range.startContainer)) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    event.preventDefault();
+    reportSelection(editor);
+    invoke(editor, 'OnContextMenuAsync', event.clientX, event.clientY, editor.selection[0], editor.selection[1]);
+  }
+
+  function reportSelection(editor) {
+    if (editor.composing) {
+      return;
+    }
+    const [start, end] = currentSelection(editor);
+    if (editor.reported && editor.reported[0] === start && editor.reported[1] === end) {
+      return;
+    }
+    editor.selection = [start, end];
+    editor.reported = [start, end];
+    invoke(editor, 'OnSelectionAsync', start, end);
+    clearTimeout(editor.copyTimer);
+    if (start !== end && editor.textarea.hidden) {
+      editor.copyTimer = setTimeout(() => invoke(editor, 'OnCopyAsync', start, end).then(text => {
+        editor.markdown = { start, end, text };
+      }), 150);
+    }
+  }
+
+  function onTextareaInput(editor) {
+    const previous = editor.value;
+    const next = editor.textarea.value;
+    let prefix = 0;
+    const limit = Math.min(previous.length, next.length);
+    while (prefix < limit && previous[prefix] === next[prefix]) prefix++;
+    let suffix = 0;
+    while (suffix < limit - prefix && previous[previous.length - 1 - suffix] === next[next.length - 1 - suffix]) suffix++;
+    editor.value = next;
+    editor.version++;
+    invoke(editor, 'OnEditAsync', prefix, previous.length - suffix, next.substring(prefix, next.length - suffix), editor.inputType || 'insertText', editor.version).then(update => applyUpdate(editor, update));
+    editor.inputType = null;
+  }
+
+  const editor = {
+    editable, textarea, instance,
+    shortcuts: shortcuts || [],
+    segments: [],
+    selection: [0, 0],
+    tracked: null,
+    version: 0,
+    rendered: 0,
+    applied: [],
+    pendingDelta: 0,
+    queued: 0,
+    virtual: null,
+    queue: Promise.resolve(),
+    pending: 0,
+    value: textarea.value,
+    composing: false,
+    reported: null,
+    markdown: null,
+    copyTimer: null,
+    listeners: []
+  };
+  const on = (target, name, handler) => {
+    target.addEventListener(name, handler);
+    editor.listeners.push([target, name, handler]);
+  };
+  const selectionListener = () => reportSelection(editor);
+  on(editable, 'beforeinput', e => onBeforeInput(editor, e));
+  on(editable, 'compositionstart', () => onCompositionStart(editor));
+  on(editable, 'compositionend', e => onCompositionEnd(editor, e));
+  on(editable, 'keydown', e => onKeyDown(editor, e));
+  on(editable, 'click', e => onClick(editor, e));
+  on(editable, 'copy', e => onCopy(editor, e, false));
+  on(editable, 'cut', e => onCopy(editor, e, true));
+  on(editable, 'contextmenu', e => onContextMenu(editor, e));
+  on(editable, 'focus', () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || !editable.contains(selection.anchorNode) || (selection.anchorNode === editable && selection.isCollapsed && !matchesTracked(editor, editable, selection.anchorOffset, 'from'))) {
+      setSelection(editor, editor.selection[0], editor.selection[1]);
+    }
+    document.addEventListener('selectionchange', selectionListener);
+    invoke(editor, 'OnFocusAsync');
+    reportSelection(editor);
+  });
+  on(editable, 'blur', () => {
+    document.removeEventListener('selectionchange', selectionListener);
+    invoke(editor, 'OnBlurAsync');
+  });
+  on(textarea, 'beforeinput', e => { editor.inputType = e.inputType; });
+  on(textarea, 'input', () => onTextareaInput(editor));
+  on(textarea, 'keydown', e => onKeyDown(editor, e));
+  on(textarea, 'focus', () => {
+    document.addEventListener('selectionchange', selectionListener);
+    invoke(editor, 'OnFocusAsync');
+    reportSelection(editor);
+  });
+  on(textarea, 'blur', () => {
+    document.removeEventListener('selectionchange', selectionListener);
+    invoke(editor, 'OnBlurAsync');
+  });
+
+  return {
+    update: function (value, focus) {
+      if (focus && editor.textarea.hidden && document.activeElement !== editor.editable) {
+        editor.editable.focus();
+      }
+      if (focus && !editor.textarea.hidden && document.activeElement !== editor.textarea) {
+        editor.textarea.focus();
+      }
+      if (value && value.text !== null && value.text !== undefined) {
+        editor.value = value.text;
+        editor.textarea.value = value.text;
+      }
+      editor.version = value.version;
+      applyUpdate(editor, value);
+    },
+    getSelection: function () {
+      return editor.queue.then(() => currentSelection(editor), () => currentSelection(editor));
+    },
+    getVersion: function () {
+      return editor.queue.then(() => editor.version, () => editor.version);
+    },
+    dispose: function () {
+      clearTimeout(editor.copyTimer);
+      for (const [target, name, handler] of editor.listeners) {
+        target.removeEventListener(name, handler);
+      }
+      document.removeEventListener('selectionchange', selectionListener);
+    }
+  };
 };
